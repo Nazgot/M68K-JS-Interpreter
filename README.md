@@ -1,3 +1,11 @@
+# Important! Submodules
+This project contains submodules, when you clone the project make sure to also run
+``` 
+git submodule init
+git submodule update
+```
+
+
 
 # M68K-JS-Interpreter
 
