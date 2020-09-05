@@ -24,7 +24,7 @@
         <div class="row">
             <div class="col-md-6">
                 <p class="lead">Codice</p>
-                <div id="editor"> function lmao(foo) {} </div>
+                <div id="editor">Syntax highlight coming soon </div>
             </div>
 
             <div class="col-md-6">
@@ -131,7 +131,7 @@
 
             </div>
             <div class="col-md-6">
-                <h4>Features</h4>
+                <h4>PLACEHOLDER, IGNORE THE FOLLOWING TEXT</h4>
                 <ul>
                     <li><em>Reset</em> to load the code, <em>Step</em> one instruction, or <em>Run</em> all instructions
                     </li>
@@ -188,33 +188,53 @@
                         <tr>
                             <td>0x00000000</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000004</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000008</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x0000000c</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000010</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000014</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000018</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x0000001c</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000020</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                         <tr>
                             <td>0x00000024</td>
                             <td>0</td>
+                            <td>0x00</td>
+                            <td>00000000</td>
                     </tbody>
                 </table>
             </div>
@@ -230,7 +250,7 @@
     <script>
         var editor = ace.edit("editor");
         editor.setTheme("ace/theme/monokai");
-        editor.session.setMode("ace/mode/javascript");
+       // editor.session.setMode("ace/mode/m68k");
     </script>
 
     <script type="text/javascript">
@@ -238,6 +258,7 @@
         var ended = false;
         var started = false;
         var worker;
+        var memory_starting_point = 0;
 
         function go() {
             ended = false;
@@ -259,7 +280,7 @@
                 // If the program is not ended
                 if(!worker.emulationStep()) {
                     // Updating UI
-                    UIUpdate(worker);
+                    UIUpdate(worker, memory_starting_point);
                     // Delaying the next step if the user put a delay
                     setTimeout(work, delay);
                 } else {
@@ -283,9 +304,9 @@
                 started = true;
             }
             if(!worker.emulationStep()) {
-                UIUpdate(worker);
+                UIUpdate(worker, 0);
             } else {
-                UIUpdate(worker);
+                UIUpdate(worker, 0);
                 ended = true;
                 document.getElementById('step').setAttribute("disabled","disabled");
             }
@@ -294,6 +315,7 @@
         function reset() {
             ended = false;
             started = false;
+            memory_starting_point = 0;
             UIReset();
             console.log("Emulation reset");
         }

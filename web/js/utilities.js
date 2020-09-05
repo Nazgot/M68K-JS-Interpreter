@@ -52,39 +52,57 @@ function sleep(milliseconds) {
     }
 }
 
-function UIUpdate(worker) {
+function UIUpdate(worker, memory_starting_point) {
     // Re-building registers table
     registers = worker.getRegisters();
 
-    var HTMLRegistri = sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td>", registers[0], 0, registers[0] >>> 0);
-
+    var HTMLRegistri = sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td></tr>", registers[0], 0, registers[0] >>> 0);
+    
     for (i = 1; i < 8; i++) {
-        HTMLRegistri += sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td>", registers[i], i, registers[i] >>> 0);
+        HTMLRegistri += sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td></tr>", registers[i], i, registers[i] >>> 0);
     }
 
-    HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td>", registers[8], 0, registers[8] >>> 0);
+    HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td></tr>", registers[8], 0, registers[8] >>> 0);
 
     for (i = 9; i < 16; i++) {
-        HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td>", registers[i], i - 8, registers[i] >>> 0);
+        HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td></tr>", registers[i], i - 8, registers[i] >>> 0);
     }
     document.getElementById('registers').innerHTML = HTMLRegistri;
-    
+
+    // Re-building memory table
+    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", memory_starting_point, worker.memory.getByte(memory_starting_point), worker.memory.getByte(memory_starting_point) >>> 0, worker.memory.getByte(memory_starting_point) >>> 0);
+
+    for( i = 1; i < 10; i++) {
+        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", i * 4, worker.memory.getByte(i * 4), worker.memory.getByte(i * 4) >>> 0, worker.memory.getByte(i * 4) >>> 0);
+    }
+    document.getElementById('memory').innerHTML = HTMLMemoria;
+
     // Setting the text for the last elapsed instruction
     document.getElementById('last_instruction').innerHTML = worker.getLastInstruction();
 }
 
 function UIReset() {
-    var HTMLRegistri = sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td>", 0, 0, 0 >>> 0);
+    // Clearing registers table
+    var HTMLRegistri = sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td></tr>", 0, 0, 0 >>> 0);
 
     for (i = 1; i < 8; i++) {
-        HTMLRegistri += sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td>", 0, i, 0 >>> 0);
+        HTMLRegistri += sprintf("<tr><td>%d</td><td>a%d</td><td>0x%08x</td></tr>", 0, i, 0 >>> 0);
     }
 
-    HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td>", 0, 0, 0 >>> 0);
+    HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td></tr>", 0, 0, 0 >>> 0);
 
     for (i = 9; i < 16; i++) {
-        HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td>", 0, i - 8, 0 >>> 0);
+        HTMLRegistri += sprintf("<tr><td>%d</td><td>d%d</td><td>0x%08x</td></tr>", 0, i - 8, 0 >>> 0);
     }
     document.getElementById('registers').innerHTML = HTMLRegistri;
+
+    // Clearing memory table
+    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", 0, 0, 0 >>> 0, 0 >>> 0);
+
+    for( i = 1; i < 10; i++) {
+        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", i * 4, 0, 0 >>> 0, 0 >>> 0);
+    }
+    document.getElementById('memory').innerHTML = HTMLMemoria;
+
     document.getElementById('last_instruction').innerHTML = "L'istruzione più recente verrà mostrata qui!"
 }

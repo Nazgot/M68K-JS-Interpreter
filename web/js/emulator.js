@@ -71,37 +71,9 @@ class Emulator {
     }
 
     debug() {
-        this.registers[8] = 0x00bc614e;
-        this.registers[9] = 0x009F00B2;
-        this.registers[12] = 0x8fffffff;
-        this.registers[10] = 0x0000004e;
-        this.memory.set(5, 0x00bc614e, Emulator.CODE_LONG);
-        this.registers[0] = 5;
-        console.log(this.instructions);
-        this.ccr = 0x1f;
-        // Can add as many emulation steps as preferred for debug  
-        console.log(this.pc);
-        this.emulationStep();
-        console.log(this.pc);
-        sleep(1000);
-        this.emulationStep();
-        console.log(this.pc);
-        sleep(1000);
-        this.emulationStep();
-        console.log(this.pc);
-        sleep(1000);
-        this.emulationStep();
-        console.log(this.pc);
-        sleep(1000);
-        this.emulationStep();
-        console.log(this.pc);
-        sleep(1000);
-        this.emulationStep();
-        console.log(this.pc);
-        //console.log(this.ccr.toString(2));
-        //console.log("memory(5) " + this.memory.getLong(5).toString(16));
-        //console.log(this.memory.memory);
-        console.log(this.cloned_instructions);
+        console.log("----------------------------------------");
+        console.log(this.memory.getWord(0));
+        console.log("----------------------------------------");
     }
 
     /* GET AND SET */
