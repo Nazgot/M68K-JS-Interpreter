@@ -20,7 +20,7 @@ STEP, RUN, RESET are finally implemented and working (probably).
  - SUB, SUBI, SUBA  
  
 #### Binary Instructions
- - NOT, AND, OR, EOR 
+ - NOT, AND, ANDI, OR, ORI, EOR, EORI
 
 #### Basic Instructions
 
