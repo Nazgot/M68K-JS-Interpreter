@@ -70,10 +70,12 @@ function UIUpdate(worker, memory_starting_point) {
     document.getElementById('registers').innerHTML = HTMLRegistri;
 
     // Re-building memory table
-    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", memory_starting_point, worker.memory.getByte(memory_starting_point), worker.memory.getByte(memory_starting_point) >>> 0, worker.memory.getByte(memory_starting_point) >>> 0);
+    let number =  parseInt(worker.memory.getByte(memory_starting_point >>> 0), 16);
+    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", memory_starting_point, number, number, number);
 
     for( i = 1; i < 10; i++) {
-        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", i * 4, worker.memory.getByte(i * 4), worker.memory.getByte(i * 4) >>> 0, worker.memory.getByte(i * 4) >>> 0);
+        let number =  parseInt(worker.memory.getByte((i * 4) >>> 0), 16);
+        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", i * 4, number, number, number);
     }
     document.getElementById('memory').innerHTML = HTMLMemoria;
 

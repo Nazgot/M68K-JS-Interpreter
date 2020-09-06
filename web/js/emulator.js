@@ -72,7 +72,7 @@ class Emulator {
 
     debug() {
         console.log("----------------------------------------");
-        console.log(this.memory.getWord(0));
+        console.log(this.memory);
         console.log("----------------------------------------");
     }
 

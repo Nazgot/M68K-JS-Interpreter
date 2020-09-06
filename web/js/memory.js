@@ -35,7 +35,7 @@ class Memory {
             return undefined;
 
         var thirdByte = this.getByte(address + 1);
-        if(!this.isValidAddress(address )) 
+        if(!this.isValidAddress(address)) 
             return undefined;
 
         var fourthByte = this.getByte(address + 0);
@@ -70,8 +70,8 @@ class Memory {
 
     setLong(address, value) {
         address = address >>> 0;
-        this.setByte(address + 12, value);
-        this.setByte(address + 8, value >>> 8);
+        this.setByte(address + 12, value >>> 0);
+        this.setByte(address + 8, value >>> 8); 
         this.setByte(address + 4, value >>> 16);
         this.setByte(address + 0, value >>> 24);
     }
