@@ -67,12 +67,12 @@ class Emulator {
         // Setting program counter to the start of data initialization section
         this.pc = this.simhaltPointer[0] << 2;
         
-        //this.debug();
+        this.debug();
     }
 
     debug() {
         console.log("----------------------------------------");
-        console.log(this.memory);
+        console.log(this.instructions);
         console.log("----------------------------------------");
     }
 
