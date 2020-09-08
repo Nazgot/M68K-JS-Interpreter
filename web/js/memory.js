@@ -64,15 +64,15 @@ class Memory {
     
     setWord(address, value) {
         address = address >>> 0;
-        this.setByte(address + 4, value);
+        this.setByte(address + 1, value);
         this.setByte(address, value >>> 8);
     }
 
     setLong(address, value) {
         address = address >>> 0;
-        this.setByte(address + 12, value >>> 0);
-        this.setByte(address + 8, value >>> 8); 
-        this.setByte(address + 4, value >>> 16);
+        this.setByte(address + 3, value >>> 0);
+        this.setByte(address + 2, value >>> 8); 
+        this.setByte(address + 1, value >>> 16);
         this.setByte(address + 0, value >>> 24);
     }
 
