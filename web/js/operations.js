@@ -612,7 +612,63 @@ function mulOP(op1, op2, ccr, is_unsigned) {
         ccr = (ccr & 0x17) >>> 0;
 
     // Re-setting Overflow and Carry flags 
-    ccr = ccr & 0x1C;
+    ccr = (ccr & 0x1C) >>> 0;
 
     return [res, ccr];
+}
+
+function divOP(op1, op2, ccr, is_unsigned) {
+
+    var ops;
+    var quotient;
+    var remainder;
+
+    // Checking if the operation will overflow
+    if((op2 & !Emulator.WORD_MASK) >= (op1 & Emulator.WORD_MASK)) {
+        // Setting the Overflow flag
+        ccr = (ccr | 0x02) >>> 0;
+
+        // Re-setting Carry flag
+        ccr = (ccr & 0x1E) >>> 0;
+
+        // No changes to the dividend
+        return [op2, ccr];
+    }
+
+    if(is_unsigned) {
+        ops = new Uint16Array([op1]);
+        quotient = op2 / ops[0];
+        remainder = op2 % ops[0];
+    } else {
+        ops = new Int16Array([op1]);
+        quotient = op2 / ops[0];
+        remainder = op2 % ops[0];
+    }
+
+    // CCR Management
+
+    // Managing Zero flag 
+    if(quotient === 0)
+        ccr = (ccr | 0x04) >>> 0;   
+    else 
+        ccr = (ccr & 0x1B) >>> 0;
+
+    // Managing Negative flag
+    if(quotient < 0)
+        ccr = (ccr | 0x08) >>> 0;   
+    else 
+        ccr = (ccr & 0x17) >>> 0;
+    
+    // Re-setting Carry flag
+    ccr = (ccr & 0x1E) >>> 0;
+
+    // Merging remainder and quotient
+
+    // Shifting remainder to the left, should look like 0xABCD0000
+    remainder = remainder << 16;
+
+    // Sum of remainder and quotient should be 0xABCD1234 where ABCD is remainder and 1234 is quotient
+    var result = remainder + (quotient & Emulator.WORD_MASK);
+
+    return [result, ccr];
 }

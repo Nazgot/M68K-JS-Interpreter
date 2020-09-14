@@ -55,7 +55,7 @@ function UIReset() {
     }
     document.getElementById('memory').innerHTML = HTMLMemoria;
 
-    document.getElementById('last_instruction').innerHTML = "L'istruzione più recente verrà mostrata qui!"
+    document.getElementById('last_instruction').innerHTML = Strings.LAST_INSTRUCTION_DEFAULT_TEXT;
 }
 
 function initializeRegisters() {
@@ -92,4 +92,8 @@ function memoryDownload() {
     dlAnchorElem.setAttribute("href", dataStr);
     dlAnchorElem.setAttribute("download", "memory.json");
     dlAnchorElem.click();
+}
+
+function setLastInstruction(instruction) {
+    document.getElementById('last_instruction').innerHTML = instruction;
 }

@@ -39,6 +39,7 @@ class Emulator {
         this.endPointer = undefined;
         this.simhaltPointer = undefined;
         this.lastInstruction;
+        this.exception;
 
         // If instructions is undefined then the instructions are empty
         this.instructions = program || ""; 
@@ -77,6 +78,14 @@ class Emulator {
     }
 
     /* GET AND SET */
+
+    setException(exception) {
+        this.exception = exception;
+    }
+
+    getException() {
+        return this.exception;
+    }
 
     getRegisters() {
         return this.registers;
@@ -437,8 +446,8 @@ class Emulator {
         
         // If the program counter is invalid we stop the execution of the program
         if(!this.checkPC(this.pc)) {
-            //TODO error invalid program counter
-            return;
+            this.exception = Strings.INVALID_PC_EXCEPTION;
+            return true;
         }
 
         var instruction = this.instructions[this.pc / 4][0];
@@ -449,7 +458,7 @@ class Emulator {
         // If the instruction is a label, skip it
         if(flag === true) {
             console.log("skipping label");
-            return;
+            return false;
         }
 
         // Checking if the instruction is an instruction that doesn't require operators
@@ -542,6 +551,20 @@ class Emulator {
                         break;
                     }
                     this.muls(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
+                    break;
+                case "divu":
+                    if(operands.length != 2) {
+                        // TODO: Error
+                        break;
+                    }
+                    this.divu(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
+                    break;
+                case "divs":
+                    if(operands.length != 2) {
+                        // TODO: Error
+                        break;
+                    }
+                    this.divs(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "swap":
                     if(operands.length != 1) {
@@ -773,9 +796,12 @@ class Emulator {
                 default:
                     console.log("Unrecognised instruction at line " + this.line);
                     // TODO: raise error
-                    return;               
+                    return false;               
             }
             this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];
+            
+            if(this.exception) 
+                return true;         
         }
     }
 
@@ -2158,8 +2184,6 @@ class Emulator {
         op = parseInt(op);
         this.pc += op;
         console.log("Jumping to: " + this.pc);
-        //this.pc = aux;
-        //console.log("pc in: " + this.pc);
         return;
     }
 
@@ -2397,6 +2421,157 @@ class Emulator {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
                 var res , src = parseInt(op1.value);
                 res = mulOP(src, this.registers[op2.value], this.ccr, false);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+        }
+    }
+
+
+    // Destination must be a data register
+    // Source can be anything but address register
+    // Word-size only -> long as result
+    divu(size, op1, op2) {
+        if(op1 == undefined || op2 == undefined) {
+            // TODO : error
+            return undefined;
+        }
+
+        // Checking if dividing by zero
+        if((op1.value & Emulator.WORD_MASK) === 0x0) {
+            this.exception = Strings.DIVISION_BY_ZERO + Strings.AT_LINE + this.line;
+            return undefined;
+        }
+
+        if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
+            // TODO: warning, src and dest will be cast as word (16-bits);
+            console.log("warning: src will be cast as word (16-bits)");
+        }  
+
+        switch(op1.type.toString() + op2.type.toString()) {
+            
+            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+                //TODO: error can't do memory to memory add
+                break;
+            
+            // Example add.w $5, d0
+            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+
+                var address = parseInt(op1.value);
+                
+                if(!this.memory.isValidAddress(address)) {
+                    //TODO: error non valid address
+                    return undefined;
+                }
+
+                var res , src = this.memory.getLong(address);
+                res = divOP(src, this.registers[op2.value], this.ccr, true);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+                       
+            // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+
+                var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
+                if(!this.memory.isValidAddress(address)) {
+                    //TODO: error non valid address
+                    return undefined;
+                }
+                var res , src = this.memory.getLong(address);
+                res = divOP(src, this.registers[op2.value], this.ccr, true);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+
+            // Example : add.w d0, d1
+            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+
+                var res , src = this.registers[op1.value];
+                res = divOP(src, this.registers[op2.value], this.ccr, true);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+            
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+                var res , src = parseInt(op1.value);
+                res = divOP(src, this.registers[op2.value], this.ccr, true);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+        }
+    }
+
+    // Destination must be a data register
+    // Source can be anything but address register
+    // Word-size only -> long as result
+    divs(size, op1, op2) {
+        if(op1 == undefined || op2 == undefined) {
+            // TODO : error
+            return undefined;
+        }
+
+        // Checking if dividing by zero
+        if((op1.value & Emulator.WORD_MASK) === 0x0) {
+            this.exception = Strings.DIVISION_BY_ZERO + Strings.AT_LINE + this.line;
+            return undefined;
+        }
+
+        if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
+            // TODO: warning, src and dest will be cast as word (16-bits);
+            console.log("warning: src will be cast as word (16-bits)");
+        }  
+
+        switch(op1.type.toString() + op2.type.toString()) {
+            
+            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+                //TODO: error can't do memory to memory add
+                break;
+            
+            // Example add.w $5, d0
+            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+
+                var address = parseInt(op1.value);
+                
+                if(!this.memory.isValidAddress(address)) {
+                    //TODO: error non valid address
+                    return undefined;
+                }
+
+                var res , src = this.memory.getLong(address);
+                res = divOP(src, this.registers[op2.value], this.ccr, false);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+                       
+            // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+
+                var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
+                if(!this.memory.isValidAddress(address)) {
+                    //TODO: error non valid address
+                    return undefined;
+                }
+                var res , src = this.memory.getLong(address);
+                res = divOP(src, this.registers[op2.value], this.ccr, false);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+
+            // Example : add.w d0, d1
+            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+
+                var res , src = this.registers[op1.value];
+                res = divOP(src, this.registers[op2.value], this.ccr, false);
+                this.registers[op2.value] = res[0];
+                this.ccr = res[1];
+                break;
+            
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+                var res , src = parseInt(op1.value);
+                res = divOP(src, this.registers[op2.value], this.ccr, false);
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;

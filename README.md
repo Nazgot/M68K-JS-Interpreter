@@ -10,6 +10,7 @@ STEP, RUN, RESET are finally implemented and working (probably).
  - ADD, ADDI, ADDA  
  - SUB, SUBI, SUBA  
  - MULS, MULU
+ - DIVS, DIVU
  
 #### Binary Instructions
  - NOT, AND, ANDI, OR, ORI, EOR, EORI

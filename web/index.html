@@ -244,6 +244,7 @@ END</div>
     <script type="text/javascript" src="js/utilities.js"></script>
     <script type="text/javascript" src="js/operations.js"></script>
     <script type="text/javascript" src="js/frontend_utilities.js"></script>
+    <script type="text/javascript" src="js/strings.js"></script>
     <script type="text/javascript" src="js/emulator.js"></script>
     <script src="./ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
@@ -289,9 +290,10 @@ END</div>
                     // Delaying the next step if the user put a delay
                     setTimeout(work, delay);
                 } else {
-                    // Flagging the program as ended and re-enabling step button
+                    // Flagging the program as ended
                     ended = true;
-                    document.getElementById('step').removeAttribute("disabled");
+                    if(worker.getException())
+                        setLastInstruction(worker.getException());
                 }
                     
             })();
@@ -318,6 +320,8 @@ END</div>
             } else {
                 UIUpdate(worker, 0);
                 ended = true;
+                if(worker.getException())
+                    setLastInstruction(worker.getException());
                 document.getElementById('step').setAttribute("disabled","disabled");
             }
         }
