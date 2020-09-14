@@ -10,7 +10,7 @@ ace.define("ace/mode/m68k_highlight_rules", ["require", "exports", "module", "ac
             start:
                 [{
                     token: 'keyword.control.m68k',
-                    regex: '\\b(?:add|addi|adda|sub|subi|suba|not|and|andi|or|ori|eor|eori|move|movea|exg|clr|swap|neg|ext|lsl|lsr|asl|asr|rol|ror|cmp|cmpa|cmpi|tst|jmp|bra|jsr|rts|bsr|beq|bne|bge|bgt|ble|blt)\\b',
+                    regex: '\\b(?:add|addi|adda|sub|subi|suba|mulu|muls|divu|divs|not|and|andi|or|ori|eor|eori|move|movea|exg|clr|swap|neg|ext|lsl|lsr|asl|asr|rol|ror|cmp|cmpa|cmpi|tst|jmp|bra|jsr|rts|bsr|beq|bne|bge|bgt|ble|blt)\\b',
                     caseInsensitive: true
                 },
                 {

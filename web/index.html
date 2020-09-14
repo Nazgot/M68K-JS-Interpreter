@@ -167,8 +167,9 @@ END</div>
                     <input type="text" id="memory-address" class="form-control" placeholder="0x00000000"
                         value="0x00000000">
                 </div>
-                <button id="memory-go" class="btn btn-primary">Go</button>
-                <button id="memory-download" class="btn btn-primary">Download!</button>
+                <button id="memory-go" class="btn btn-primary" onclick="moveMemory()">Go</button>
+                <a id="memoryDownload" style="display:none"></a>
+                <button id="memory-download" class="btn btn-primary" onclick="memoryDownload()">Download!</button>
             </div>
             <br>
             <div id="memory-table" class="table-responsive">
@@ -242,6 +243,7 @@ END</div>
     <script type="text/javascript" src="js/memory.js"></script>
     <script type="text/javascript" src="js/utilities.js"></script>
     <script type="text/javascript" src="js/operations.js"></script>
+    <script type="text/javascript" src="js/frontend_utilities.js"></script>
     <script type="text/javascript" src="js/emulator.js"></script>
     <script src="./ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
@@ -296,8 +298,9 @@ END</div>
         }
 
         function step() {
-            if(ended)
+            if(ended)   
                 return;
+                
                 
             if(!started) {
                 // Retrieving the code
@@ -325,6 +328,13 @@ END</div>
             memory_starting_point = 0;
             UIReset();
             console.log("Emulation reset");
+        }
+
+        function moveMemory() {
+            var startsAt = document.getElementById('memory-address').value;
+            startsAt = startsAt.substring(2);
+            console.log(startsAt + " " + parseInt(startsAt, 16));
+            UIUpdate(worker, parseInt(startsAt, 16));
         }
 
     </script>

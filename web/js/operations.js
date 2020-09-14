@@ -583,3 +583,36 @@ function bltOP(size, op, pc, ccr) {
         return braOP(size, op, pc);
     else return [pc, false];                               // Else we just return the pc
 }
+
+function mulOP(op1, op2, ccr, is_unsigned) {
+
+    var ops;
+    var res;
+
+    if(is_unsigned) {
+        ops = new Uint16Array([op1, op2]);
+        res = ops[1] * ops[0]; 
+    } else {
+        ops = new Int16Array([op1, op2]);
+        res = ops[1] * ops[0];
+    }
+
+    // CCR Management
+    
+    // Managing Zero flag 
+    if(res === 0)
+        ccr = (ccr | 0x04) >>> 0;   
+    else 
+        ccr = (ccr & 0x1B) >>> 0;
+
+    // Managing Negative flag
+    if(res < 0)
+        ccr = (ccr | 0x08) >>> 0;   
+    else 
+        ccr = (ccr & 0x17) >>> 0;
+
+    // Re-setting Overflow and Carry flags 
+    ccr = ccr & 0x1C;
+
+    return [res, ccr];
+}

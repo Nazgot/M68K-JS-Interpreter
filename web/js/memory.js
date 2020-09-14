@@ -80,10 +80,4 @@ class Memory {
         address = address >>> 0;
         return 0 <= address && address <= 0x7fffffff;  /// Address must be between 0 and 0111 1111 1111 1111 1111 1111 1111 1111‬
     }
-
-    printmap() {
-        for (var i = 0, keys = Object.keys(memory), ii = keys.length; i < ii; i++) {
-            console.log(keys[i] + '|' + memory[keys[i]].list);
-          }
-    }
 }
