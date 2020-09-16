@@ -30,3 +30,7 @@ STEP, RUN, RESET are finally implemented and working (probably).
 #### Jump Instructions
 
  - JMP, BRA, JSR, RTS, BSR, BEQ, BNE, BGE, BGT, BLE, BLT
+
+#### Directives
+
+ - EQU

@@ -274,6 +274,12 @@ END</div>
             
             worker = new Emulator(code);
 
+            // Managing pre processing exceptions
+            if(worker.getException()) {
+                setLastInstruction(worker.getException());
+                return;
+            }
+
             var registers = new Int32Array(16);
 
             // Initializing registers with user provided values
@@ -294,6 +300,9 @@ END</div>
                     ended = true;
                     if(worker.getException())
                         setLastInstruction(worker.getException());
+                    if(worker.getErrors() != []) {
+                        alert(worker.getErrors());
+                    }
                 }
                     
             })();
@@ -308,6 +317,11 @@ END</div>
                 // Retrieving the code
                 var code = editor.getValue();
                 worker = new Emulator(code);
+                // Managing pre processing exceptions
+                if(worker.getException()) {
+                    setLastInstruction(worker.getException());
+                    return;
+                }
                 var registers = new Int32Array(16);
                 started = true;
             }

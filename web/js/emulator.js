@@ -26,7 +26,10 @@ class Emulator {
     static get MSB_WORD_MASK() {return 0x8000};
     static get MSB_LONG_MASK() {return 0x80000000};
 
+    // Directives REGEX
     static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gm };
+    static get EQU_REGEX() { return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+equ\s+[0-9]+$/gm };
+    static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))[A-z0-9a-z]+/gm };
     
     constructor(program) {
 
@@ -40,6 +43,7 @@ class Emulator {
         this.simhaltPointer = undefined;
         this.lastInstruction;
         this.exception;
+        this.errors = [];
 
         // If instructions is undefined then the instructions are empty
         this.instructions = program || ""; 
@@ -59,8 +63,7 @@ class Emulator {
         this.findLabels();
         // Checking if SIMHALT and END directives are defined
         if(!areSectionsValid(this.endPointer, this.simhaltPointer)){
-            //TODO error no SIMHALT or END directives found
-            console.log("Missing SIMHALT or END");
+            this.exception = Strings.SIMHALT_END_MISSING;
             return;
         }
         // Adding jump to START after reching END for the first time section
@@ -68,13 +71,14 @@ class Emulator {
         // Setting program counter to the start of data initialization section
         this.pc = this.simhaltPointer[0] << 2;
         
-        //this.debug();
+        this.debug();
     }
 
     debug() {
-        console.log("----------------------------------------");
-        console.log(this.memory.printmap());
-        console.log("----------------------------------------");
+        console.log("-----------------DEBUG------------------");
+        console.log(this.instructions);
+        console.log(this.labels);
+        console.log("-----------------DEBUG------------------");
     }
 
     /* GET AND SET */
@@ -97,6 +101,10 @@ class Emulator {
     
     getLastInstruction() {
         return this.lastInstruction;
+    }
+
+    getErrors() {
+        return this.errors;
     }
 
     removeComments() {
@@ -141,10 +149,10 @@ class Emulator {
             // If a label is captured (ends with ':')
             if(instruction.charAt(instruction.length -1 ) == ':') { 
                 var label = instruction.substring(0, instruction.indexOf(':'));
-                // If the label is repeated an error is thrown 
+                // If the label is repeated an exception is thrown 
                 if(this.labels[label] !== undefined) {
-                    //TODO: error propagation
-                    continue;
+                    this.exception = Strings.DUPLICATE_LABEL + label;
+                    return;
                 }
 
                 // The label point to the label itself              
@@ -161,10 +169,10 @@ class Emulator {
                 // We extract the label
                 var label = instruction.substring(0, instruction.indexOf(':'));
 
-                // If it is a duplicate label we raise an error and continue
+                // If it is a duplicate label we raise an exception
                 if(this.labels[label] !== undefined) {
-                    //TODO: error propagation
-                    continue;
+                    this.exception = Strings.DUPLICATE_LABEL + label;
+                    return;
                 }
                 
                 // We extract the instruction (DC.X <string> OR DC.X <data list>)
@@ -202,7 +210,7 @@ class Emulator {
                     this.instructions[i] = [label + ":", i + 1, true];
                     // For each element of the data list
                     for(var t = 0, j = i + 1; t < tmp.length; j++, t++) {
-                        // We splice the element in pushing the following lines forward
+                        // We splice the elements pushing the following lines forward
                         this.instructions.splice(j, 0, [list[t], i + 1, true]) ;                                              
                     }
                     
@@ -217,16 +225,23 @@ class Emulator {
                     this.instructions[i] = [label + ":", i + 1, true];
                     this.instructions.splice(i + 1, 0, [tmp, i + 1, true]);
                     continue;
-                }
-               
-            } else {
-                //TODO : syntax error
+                } 
+            } 
+
+            // Checkign if the instruction is an EQU
+            res = Emulator.EQU_REGEX.exec(instruction);
+            if(res != null) {
+                var label = instruction.substring(0, instruction.indexOf(':'));
+                var tmp = instruction.substring(instruction.indexOf('u') + 1, instruction.length).trim();
+                this.labels[label] = tmp;
+                this.instructions[i] = [instruction, i + 1, true];
                 continue;
             }
         }
 
-        // Linking labels to memory
-        for(var i = 0; i < this.instructions.length; ++i) { 
+        
+        // Linking labels to instructions
+        for(var i = 0; i < this.instructions.length, i < this.simhaltPointer[0] - 1 ; ++i) { 
 
             // Skipping labels and data stored in instruction space with DC
             if(this.instructions[i][2])
@@ -248,13 +263,22 @@ class Emulator {
                     if(this.labels[label] !== undefined) 
                         operands[operands.length - 1] = (this.labels[label] - i) << 2; // Relative jump, 2 bit left shift (X4) to preserve alignment
                     else if(isNaN(parseInt(label))) {
-                            //TODO: Raise unknown label error
-                            // Jumping to the end
-                            operands[operands.length - 1] = 0x2ffffff << 2;
+                            this.exception = Strings.UNKNOWN_LABEL + label;
+                            this.emulationStep();
                         }
                     // Now the instruction will be replaced with the instruction without the label
                     this.instructions[i][0] = operation + " " + operands.join(',');
-                }                 
+                } else {
+                    // If we enter here it means we are maybe retrieving a constant
+                    var label = operands[0].trim().substring(1);
+                    if(this.labels[label] !== undefined) {
+                        // Replacing label name with label value
+                        this.instructions[i][0] = this.instructions[i][0].replace(Emulator.IMMEDIATE_LABEL_REPLACE, "$1$" + this.labels[label]);
+                    } else if(isNaN(parseInt(label)) && isNaN(parseInt(label.substring(1)))) {
+                        this.exception = Strings.UNKNOWN_LABEL + label;
+                        return;
+                    }
+                }             
             }            
         }
     }
@@ -277,9 +301,10 @@ class Emulator {
                     return Emulator.CODE_WORD;
                 case 'l': 
                     return Emulator.CODE_LONG;
+                default: 
+                    this.errors.push(Strings.INVALID_OP_SIZE + Strings.AT_LINE + this.line);
+                    return Emulator.CODE_WORD;;
             }
-            // TODO: If we didn't return from switch we raise an invalid op size error
-            return undefined;
         }
         else {
             // If we do not specify a size we use WORD as default
@@ -321,11 +346,11 @@ class Emulator {
             case "d6":
                 return 14; 
             case "d7":
-                return 15;                
+                return 15;
+            default:
+                this.errors.push(Strings.INVALID_REGISTER + Strings.AT_LINE + this.line);
+                return undefined;                
         }
-        
-        // TODO: If we do not return from the switch we raise a wrong register error
-        return undefined;
     }
 
     // Return an object containing the value and the type of the token
@@ -344,7 +369,7 @@ class Emulator {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
                 if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
-                    //TODO: error unvalid address token
+                    this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res.value = result.value;
@@ -356,7 +381,7 @@ class Emulator {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
                 if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
-                    //TODO: error unvalid address token
+                    this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res.value = result.value ;
@@ -368,7 +393,7 @@ class Emulator {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
                 if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
-                    //TODO: error unvalid address token
+                    this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res.value = result.value;
@@ -382,7 +407,7 @@ class Emulator {
             let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
             // Checking if the token inside () is valid
             if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
-                //TODO: error unvalid address token
+                this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                 return undefined;
             }
             res.value = result.value;
@@ -427,7 +452,7 @@ class Emulator {
             return res;
         }
 
-        // TODO: error
+        this.errors.push(Strings.UNKNOWN_OPERAND + Strings.AT_LINE);
         return undefined;
     }
     
@@ -438,6 +463,10 @@ class Emulator {
 
     emulationStep() {
         
+        // Checking if an exeption has occurred during last instruction
+        if(this.exception) 
+            return true;   
+
         // If we reached the end of instructions or we reached the .data section again the program is ended
         if( this.pc / 4 >= this.instructions.length || this.pc / 4 == this.simhaltPointer[0] - 1) {
             console.log("Program ended");
@@ -484,252 +513,252 @@ class Emulator {
             switch(operation.toLowerCase()) {
                 case "add":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.add(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "addi":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.addi(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "adda":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.adda(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "move":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.move(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "movea":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.movea(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "sub":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.sub(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "subi":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.subi(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "suba":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.subi(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "mulu":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.mulu(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "muls":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.muls(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "divu":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.divu(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "divs":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.divs(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "swap":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.swap(this.parseOperand(operands[0]));
                     break;
                 case "exg":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.exg(this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "clr":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.clr(size, this.parseOperand(operands[0]));
                     break;
                 case "not":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.not(size, this.parseOperand(operands[0]));
                     break;
                 case "and":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.and(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "andi":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.andi(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "or":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.or(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "ori":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.ori(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "eor":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.eor(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "eori":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.eori(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "neg":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.neg(size, this.parseOperand(operands[0]));
                     break;
                 case "ext":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.ext(size, this.parseOperand(operands[0]));
                     break;
                 case "lsl":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.llrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "lsr":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.llrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), true);
                     break;
                 case "asl":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.alrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "asr":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.alrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), true);
                     break;
                 case "rol": 
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.lrRotations(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "ror": 
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.lrRotations(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), true);
                     break;
                 case "cmp":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.cmp(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "cmpa":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.cmpa(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "cmpi":
                     if(operands.length != 2) {
-                        // TODO: Error
+                        this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.cmpi(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "tst":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.tst(size, this.parseOperand(operands[0]));
                     break;
                 case "jmp":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.jmp(operands[0]);
                     break;
                 case "jsr":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.jsr(operands[0]);
@@ -739,69 +768,66 @@ class Emulator {
                     break;
                 case "bra":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bra(size, operands[0]);
                     break;
                 case "bsr":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bsr(size, operands[0]);
                     break;
                 case "beq":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.beq(size, operands[0]);
                     break;
                 case "bne":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.beq(size, operands[0]);
                     break;
                 case "bge":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bge(size, operands[0]);
                     break;
                 case "bgt":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bgt(size, operands[0]);
                     break;
                 case "ble":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.ble(size, operands[0]);
                     break;
                 case "blt":
                     if(operands.length != 1) {
-                        // TODO: Error
+                        this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.blt(size, operands[0]);
                     break;
                 default:
                     console.log("Unrecognised instruction at line " + this.line);
-                    // TODO: raise error
+                    this.errors.push(Strings.UNRECOGNISED_INSTRUCTION + Strings.AT_LINE + this.line);
                     return false;               
             }
-            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];
-            
-            if(this.exception) 
-                return true;         
+            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];                
         }
     }
 
@@ -809,7 +835,7 @@ class Emulator {
     // Can't do memory to memory add
     add(size, op1, op2, is_sub) {
         if(op1 == undefined || op2 == undefined) {
-            // TODO : error
+            // If i get inside here an error for the same issue has already been raised. 
             return undefined;
         }
 
@@ -817,7 +843,7 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory add
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() : 
@@ -833,7 +859,7 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -849,7 +875,7 @@ class Emulator {
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -864,7 +890,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res , src = this.memory.getLong(address);
@@ -878,7 +904,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -903,7 +929,7 @@ class Emulator {
     // Source must be an immediate
     addi(size, op1, op2, is_sub) {
         if(op1 == undefined || op2 == undefined) {
-            // TODO : error
+            // If i get inside here an error for the same issue has already been raised. 
             return undefined;
         }
         
@@ -915,7 +941,7 @@ class Emulator {
                 var address = parseInt(op2.value);
 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -930,7 +956,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -971,7 +997,7 @@ class Emulator {
                 var address = parseInt(op1.value);
 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -986,7 +1012,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 
@@ -1035,7 +1061,7 @@ class Emulator {
                 var address = op1.value;
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -1048,7 +1074,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -1062,7 +1088,7 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = moveOP(this.registers[op1.value], this.memory.getLong(address), this.ccr, size);
@@ -1074,7 +1100,7 @@ class Emulator {
                 var address = parseInt(op2.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -1088,7 +1114,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -1101,7 +1127,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 
@@ -1146,7 +1172,7 @@ class Emulator {
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 switch(size) {
@@ -1161,7 +1187,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 switch(size) {
@@ -1197,7 +1223,7 @@ class Emulator {
     // Swaps the upper word with the lower word of a data register
     swap(op) {
         if(op.type != Emulator.TOKEN_REG_DATA) {
-            // ERROR: can only swap a data register 
+            this.errors.push(Strings.DATA_ONLY_SWAP + Strings.AT_LINE + this.line); 
             return;
         }
         var res = swapOP(this.registers[op.value], this.ccr);
@@ -1209,6 +1235,7 @@ class Emulator {
     exg(op1, op2) {
         if((op1.type != Emulator.TOKEN_REG_DATA && op1.type != Emulator.TOKEN_REG_ADDR) || (op2.type != Emulator.TOKEN_REG_DATA && op2.type != Emulator.TOKEN_REG_ADDR)) {
                 // ERROR, can only exg data - data , address-address, data - address, address - data;
+                this.errors.push(Strings.EXG_RESTRICTIONS + Strings.AT_LINE + this.line);
                 return;
         }
         var res = exgOP(this.registers[op1.value], this.registers[op2.value]);
@@ -1229,7 +1256,7 @@ class Emulator {
 
                 var address = parseInt(op.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = clrOP(size, this.memory.getLong(address), this.ccr);
@@ -1240,7 +1267,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op.value], 16) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = clrOP(size, this.memory.getLong(address), this.ccr);
@@ -1248,7 +1275,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             default :
-                // Error can't clr an address register
+                this.errors.push(Strings.CLR_ON_ADDRESS + Strings.AT_LINE + this.line);
                 break;
         }
     }
@@ -1265,7 +1292,7 @@ class Emulator {
 
                 var address = parseInt(op.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = notOP(size, this.memory.getLong(address), this.ccr);
@@ -1276,7 +1303,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op.value], 16) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = notOP(size, this.memory.getLong(address), this.ccr);
@@ -1284,7 +1311,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             default :
-                // Error can't clr an address register
+                this.errors.push(Strings.NOT_ON_ADDRESS + Strings.AT_LINE + this.line);
                 break;
         }
     }
@@ -1298,14 +1325,14 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory and
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = andOP(size, this.registers[op1.value], this.memory.getLong(address), this.ccr);
@@ -1317,7 +1344,7 @@ class Emulator {
 
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = andOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -1328,7 +1355,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = andOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -1339,7 +1366,7 @@ class Emulator {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = andOP(size, this.registers[op1.value], this.memory.getLong(address), this.ccr);
@@ -1353,7 +1380,6 @@ class Emulator {
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
-
         }
     }
 
@@ -1366,7 +1392,7 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = andOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -1378,7 +1404,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = andOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -1404,14 +1430,14 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory add
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = orOP(size, this.registers[op1.value], this.memory.getLong(address), this.ccr);
@@ -1423,7 +1449,7 @@ class Emulator {
 
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = orOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -1435,7 +1461,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = orOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -1446,7 +1472,7 @@ class Emulator {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = orOP(size, this.registers[op1.value], this.memory.getLong(address), this.ccr);
@@ -1473,7 +1499,7 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = orOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -1485,7 +1511,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = orOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -1512,14 +1538,14 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory add
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = eorOP(size, this.registers[op1.value], this.memory.getLong(address), this.ccr);
@@ -1530,7 +1556,7 @@ class Emulator {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = eorOP(size, this.registers[op1.value], this.memory.getLong(address), this.ccr);
@@ -1557,7 +1583,7 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res = eorOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -1569,7 +1595,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = eorOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -1594,13 +1620,12 @@ class Emulator {
                 var res = addOP(this.registers[op.value] * -1, 0x0, this.ccr, size);
                 this.registers[op.value] = res[0];
                 this.ccr = res[1];
-               // this.registers[op.value] = negOP(size, this.registers[op.value]);
                 break;
             case Emulator.TOKEN_OFFSET :
 
                 var address = parseInt(op.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = addOP(this.memory.getLong(address) * -1, 0x0, this.ccr, size);
@@ -1611,7 +1636,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op.value], 16) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = addOP(this.memory.getLong(address) * -1, 0x0, this.ccr, size);
@@ -1619,7 +1644,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             default :
-                // Error can't neg an address register
+                this.errors.push(Strings.NEG_ON_ADDRESS + Strings.AT_LINE + this.line);
                 break;
         }
     }
@@ -1627,7 +1652,7 @@ class Emulator {
     // Extends the sign of a byte to word or of a word to long-word
     ext(size, op) {
         if(size = Emulator.CODE_BYTE) {
-            // Error, this isntruction is word or long-word
+            this.errors.push(Strings.EXT_ON_BYTE + Strings.AT_LINE + this.line);
             return;
         }
 
@@ -1638,7 +1663,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             default :
-                // Can only ext a data register
+                this.errors.push(Strings.DATA_ONLY_EXT + Strings.AT_LINE + this.line);
                 break;
         }
     }
@@ -1651,16 +1676,16 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) {
@@ -1679,16 +1704,16 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) {
@@ -1707,7 +1732,8 @@ class Emulator {
 
                 op1 = parseInt(op1.value);
                 if(op1 > 0x08) {
-                    // Error can't shift immediate for more than 08 bits
+                    this.errors.push(Strings.IMMEDIATE_SHIFT_MAX_SIZE + Strings.AT_LINE + this.line);
+                    return;
                 }
                 if(right) {
                     res = lsrOP(size, op1, this.registers[op2.value], this.ccr);
@@ -1725,17 +1751,17 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
                 op1 = this.registers[op1.value]
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
 
@@ -1755,16 +1781,16 @@ class Emulator {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = this.registers[op1.value]
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) {
@@ -1808,16 +1834,16 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) res = asrOP(size, op1, this.memory.getLong(address), this.ccr);
@@ -1832,16 +1858,16 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) res = asrOP(size, op1, this.memory.getLong(address), this.ccr);
@@ -1856,7 +1882,8 @@ class Emulator {
 
                 op1 = parseInt(op1.value);
                 if(op1 > 0x08) {
-                    // Error can't shift immediate for more than 08 bits
+                    this.errors.push(Strings.IMMEDIATE_SHIFT_MAX_SIZE + Strings.AT_LINE + this.line);
+                    return;
                 }
                 if(right) res = asrOP(size, op1, this.registers[op2.value], this.ccr); 
                 else aslOP(size, op1, this.registers[op2.value], this.ccr);
@@ -1868,16 +1895,16 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = this.registers[op1.value]
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
 
@@ -1891,16 +1918,16 @@ class Emulator {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = this.registers[op1.value]
                 if(op1 > 0x01) {
-                    // Error can't shift memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't shift any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) res = asrOP(size, op1, this.memory.getLong(address), this.ccr);
@@ -1931,16 +1958,16 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
                 if(op1 > 0x01) {
-                    // Error can't rotate memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't rotate any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) res = rorOP(size, op1, this.memory.getLong(address), this.ccr);
@@ -1953,16 +1980,16 @@ class Emulator {
 
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
                 if(op1 > 0x01) {
-                    // Error can't rotate memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't rotate any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) res = rorOP(size, op1, this.memory.getLong(address), this.ccr);               
@@ -1975,7 +2002,7 @@ class Emulator {
 
                 op1 = parseInt(op1.value);
                 if(op1 > 0x08) {
-                    // Error can't rotate immediate for more than 08 bits
+                    this.errors.push(Strings.IMMEDIATE_ROTATE_MAX_SIZE + Strings.AT_LINE + this.line);
                 }
                 if(right) res = rorOP(size, op1, this.registers[op2.value], this.ccr);
                 else res = rolOP(size, op1, this.registers[op2.value], this.ccr);
@@ -1987,17 +2014,17 @@ class Emulator {
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
                 op1 = this.registers[op1.value]
                 if(op1 > 0x01) {
-                    // Error can't rotate memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't rotate any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
 
@@ -2011,16 +2038,16 @@ class Emulator {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 op1 = this.registers[op1.value]
                 if(op1 > 0x01) {
-                    // Error can't rotate memory for more than a bit at a time
+                    this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(size != Emulator.CODE_WORD) {
-                    // Error can't rotate any size different than word in memory
+                    this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
                 if(right) res = rorOP(size, op1, this.memory.getLong(address), this.ccr);
@@ -2059,7 +2086,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString():
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -2068,7 +2095,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString():
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -2098,7 +2125,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString():
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -2107,7 +2134,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
@@ -2133,7 +2160,7 @@ class Emulator {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = cmpOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -2142,7 +2169,7 @@ class Emulator {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
                 var address = parseInt(this.registers[op2.value], 16) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = cmpOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
@@ -2161,7 +2188,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET:
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = tstOP(size, this.memory.getLong(address), this.ccr);
@@ -2170,7 +2197,7 @@ class Emulator {
             case Emulator.TOKEN_OFFSET_ADDR:
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res = tstOP(size, this.memory.getLong(address), this.ccr);
@@ -2192,7 +2219,7 @@ class Emulator {
         var res = braOP(size, op, this.pc);
         if(res[1]) {
             console.log("Offset too long for bra");
-            // Error offset too long for bra
+            this.errors.push(Strings.BRA_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2221,8 +2248,7 @@ class Emulator {
         op = parseInt(op);
         var res = beqOP(size, op, this.pc);
         if(res[1]) {
-            console.log("Offset too long for beq");
-            // Error offset too long for bra
+            this.errors.push(Strings.BEQ_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2233,8 +2259,7 @@ class Emulator {
         op = parseInt(op);
         var res = bneOP(size, op, this.pc);
         if(res[1]) {
-            console.log("Offset too long for bne");
-            // Error offset too long for bra
+            this.errors.push(Strings.BNE_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2245,8 +2270,7 @@ class Emulator {
         op = parseInt(op);
         var res = bgeOP(size, op, this.pc);
         if(res[1]) {
-            console.log("Offset too long for bge");
-            // Error offset too long for bra
+            this.errors.push(Strings.BGE_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2257,8 +2281,7 @@ class Emulator {
         op = parseInt(op);
         var res = bgtOP(size, op, this.pc);
         if(res[1]) {
-            console.log("Offset too long for bgt");
-            // Error offset too long for bra
+            this.errors.push(Strings.BGT_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2269,8 +2292,7 @@ class Emulator {
         op = parseInt(op);
         var res = bleOP(size, op, this.pc);
         if(res[1]) {
-            console.log("Offset too long for ble");
-            // Error offset too long for bra
+            this.errors.push(Strings.BLE_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2281,8 +2303,7 @@ class Emulator {
         op = parseInt(op);
         var res = bltOP(size, op, this.pc);
         if(res[1]) {
-            console.log("Offset too long for blt");
-            // Error offset too long for bra
+            this.errors.push(Strings.BLT_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
         this.pc = res[0];
@@ -2294,7 +2315,7 @@ class Emulator {
     // Word-size only -> long as result
     mulu(size, op1, op2) {
         if(op1 == undefined || op2 == undefined) {
-            // TODO : error
+            // Already risen
             return undefined;
         }
 
@@ -2307,7 +2328,7 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory add
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
             
             // Example add.w $5, d0
@@ -2316,7 +2337,7 @@ class Emulator {
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -2331,7 +2352,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res , src = this.memory.getLong(address);
@@ -2363,7 +2384,7 @@ class Emulator {
     // Word-size only -> long as result
     muls(size, op1, op2) {
         if(op1 == undefined || op2 == undefined) {
-            // TODO : error
+            // Already risen
             return undefined;
         }
 
@@ -2376,7 +2397,7 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory add
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
             
             // Example add.w $5, d0
@@ -2385,7 +2406,7 @@ class Emulator {
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -2400,7 +2421,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res , src = this.memory.getLong(address);
@@ -2433,7 +2454,7 @@ class Emulator {
     // Word-size only -> long as result
     divu(size, op1, op2) {
         if(op1 == undefined || op2 == undefined) {
-            // TODO : error
+            // Already Risen
             return undefined;
         }
 
@@ -2452,7 +2473,7 @@ class Emulator {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-                //TODO: error can't do memory to memory add
+                this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
             
             // Example add.w $5, d0
@@ -2461,7 +2482,7 @@ class Emulator {
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -2476,7 +2497,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res , src = this.memory.getLong(address);
@@ -2508,7 +2529,7 @@ class Emulator {
     // Word-size only -> long as result
     divs(size, op1, op2) {
         if(op1 == undefined || op2 == undefined) {
-            // TODO : error
+            // Already risen
             return undefined;
         }
 
@@ -2519,7 +2540,7 @@ class Emulator {
         }
 
         if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
-            // TODO: warning, src and dest will be cast as word (16-bits);
+            this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
             console.log("warning: src will be cast as word (16-bits)");
         }  
 
@@ -2536,7 +2557,7 @@ class Emulator {
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
 
@@ -2551,7 +2572,7 @@ class Emulator {
 
                 var address = parseInt(this.registers[op1.value], 16) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
-                    //TODO: error non valid address
+                    this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 var res , src = this.memory.getLong(address);
