@@ -27,9 +27,9 @@ class Emulator {
     static get MSB_LONG_MASK() {return 0x80000000};
 
     // Directives REGEX
-    static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gm };
-    static get EQU_REGEX() { return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+equ\s+[0-9]+$/gm };
-    static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))[A-z0-9a-z]+/gm };
+    static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gmi };
+    static get EQU_REGEX() { return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+equ\s+[0-9]+$/gmi };
+    static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))([A-Za-z_][_A-Z0-9a-z]+)/gmi };
     
     constructor(program) {
 
@@ -42,7 +42,7 @@ class Emulator {
         this.endPointer = undefined;
         this.simhaltPointer = undefined;
         this.lastInstruction;
-        this.exception;
+        this.exception = undefined;
         this.errors = [];
 
         // If instructions is undefined then the instructions are empty
@@ -77,6 +77,7 @@ class Emulator {
     debug() {
         console.log("-----------------DEBUG------------------");
         console.log(this.instructions);
+        console.log(this.memory);
         console.log(this.labels);
         console.log("-----------------DEBUG------------------");
     }
@@ -129,16 +130,16 @@ class Emulator {
         var length = this.instructions.length;
         for(var i = length - 1; i >= 0; --i) {
 
-            var instruction = this.instructions[i][0];
+            var instruction = this.instructions[i][0].toLowerCase();
 
             // Looking for END and SIMHALT 
-            if(instruction.toLowerCase() == "simhalt") {
+            if(instruction == "simhalt") {
                 this.simhaltPointer = [i + 1, this.instructions[i][1]]; 
                 this.instructions[i][2] = true;
                 continue;
             }
 
-            if(instruction.toLowerCase() == "end") {
+            if(instruction == "end") {
                 this.endPointer = [i + 1, this.instructions[i][1]]; // Only used as proof that END exists, will be updated later
                 // Removing all lines after END directive
                 this.instructions.splice(i + 1, this.instructions.length - i);
@@ -228,6 +229,7 @@ class Emulator {
                 } 
             } 
 
+            
             // Checkign if the instruction is an EQU
             res = Emulator.EQU_REGEX.exec(instruction);
             if(res != null) {
@@ -239,7 +241,6 @@ class Emulator {
             }
         }
 
-        
         // Linking labels to instructions
         for(var i = 0; i < this.instructions.length, i < this.simhaltPointer[0] - 1 ; ++i) { 
 
@@ -268,12 +269,19 @@ class Emulator {
                         }
                     // Now the instruction will be replaced with the instruction without the label
                     this.instructions[i][0] = operation + " " + operands.join(',');
-                } else {
+                } else if(Emulator.IMMEDIATE_LABEL_REPLACE.exec(instruction)) {
                     // If we enter here it means we are maybe retrieving a constant
-                    var label = operands[0].trim().substring(1);
+
+                    // Extracting the label
+                    var label = Emulator.IMMEDIATE_LABEL_REPLACE.exec(this.instructions[i][0])[2];
+                    // Checking if it is a hex number
+                    if(!isNaN(parseInt(label), 16)) 
+                        return;
+
+                    // If it is not a number we check if the label actually exists
                     if(this.labels[label] !== undefined) {
                         // Replacing label name with label value
-                        this.instructions[i][0] = this.instructions[i][0].replace(Emulator.IMMEDIATE_LABEL_REPLACE, "$1$" + this.labels[label]);
+                        this.instructions[i][0] = this.instructions[i][0].replace(Emulator.IMMEDIATE_LABEL_REPLACE, "$1" + this.labels[label]);
                     } else if(isNaN(parseInt(label)) && isNaN(parseInt(label.substring(1)))) {
                         this.exception = Strings.UNKNOWN_LABEL + label;
                         return;

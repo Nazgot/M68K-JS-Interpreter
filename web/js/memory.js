@@ -15,31 +15,31 @@ class Memory {
 
     // Gets a word from memory
     getWord(address) {
-        var firstByte = this.getByte(address + 1);
+        var firstBytes = this.getByte(address + 1);
 
         if(!this.isValidAddress(address))  // Check if the next byte is still in a valid address
             return undefined;
 
-        var secondByte = this.getByte(address);
-        return parseInt(secondByte + firstByte, 16);
+        var secondBytes = this.getByte(address);
+        return parseInt( firstBytes + secondBytes, 16);
     }
 
     // Gets a long-word from memory
     getLong(address) {
-        var firstByte = this.getByte(address + 3);
+        var firstBytes = this.getByte(address + 3);
         if(!this.isValidAddress(address + 2)) 
             return undefined;
 
-        var secondByte = this.getByte(address + 2);
+        var secondBytes = this.getByte(address + 2);
         if(!this.isValidAddress(address + 1)) 
             return undefined;
 
-        var thirdByte = this.getByte(address + 1);
+        var thirdBytes = this.getByte(address + 1);
         if(!this.isValidAddress(address)) 
             return undefined;
 
-        var fourthByte = this.getByte(address + 0);
-        return parseInt(fourthByte+ thirdByte + secondByte + firstByte, 16);
+        var fourthBytes = this.getByte(address + 0);
+        return parseInt(firstBytes + secondBytes + thirdBytes + fourthBytes, 16);
     }
 
     set(address, value, size) {

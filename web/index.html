@@ -300,7 +300,7 @@ END</div>
                     ended = true;
                     if(worker.getException())
                         setLastInstruction(worker.getException());
-                    if(worker.getErrors() != []) {
+                    if(worker.getErrors().length != 0) {
                         alert(worker.getErrors());
                     }
                 }
@@ -310,8 +310,7 @@ END</div>
 
         function step() {
             if(ended)   
-                return;
-                
+                return;               
                 
             if(!started) {
                 // Retrieving the code
@@ -336,6 +335,9 @@ END</div>
                 ended = true;
                 if(worker.getException())
                     setLastInstruction(worker.getException());
+                if(worker.getErrors().length != 0) {
+                    alert(worker.getErrors());
+                }
                 document.getElementById('step').setAttribute("disabled","disabled");
             }
         }
@@ -346,6 +348,7 @@ END</div>
             memory_starting_point = 0;
             UIReset();
             console.log("Emulation reset");
+            document.getElementById('step').removeAttribute("disabled");
         }
 
         function moveMemory() {
