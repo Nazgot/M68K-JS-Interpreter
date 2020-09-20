@@ -356,7 +356,7 @@ END</div>
         function moveMemory() {
             var startsAt = document.getElementById('memory-address').value;
             startsAt = startsAt.substring(2);
-            console.log(startsAt + " " + parseInt(startsAt, 16));
+            memory_starting_point = parseInt(startsAt, 16);
             UIUpdate(worker, parseInt(startsAt, 16));
         }
 
