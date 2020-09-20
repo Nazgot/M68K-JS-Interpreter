@@ -25,7 +25,6 @@
             <div class="col-md-6">
                 <p class="lead">Codice</p>
                 <div id="editor">*Your code goes here
-SIMHALT
 
 END</div>
             </div>
@@ -257,12 +256,15 @@ END</div>
 
         var ended = false;
         var started = false;
+        var stopped = false;
         var worker;
         var memory_starting_point = 0;
         var register_changed = false;
 
         function go() {
             ended = false;
+            stopped = false;
+
             // Disabling the step button
             document.getElementById('step').setAttribute("disabled","disabled");
 
@@ -290,7 +292,7 @@ END</div>
                 
                 initializeRegisters();
                 // If the program is not ended
-                if(!worker.emulationStep()) {
+                if(!stopped && !worker.emulationStep()) {
                     // Updating UI
                     UIUpdate(worker, memory_starting_point);
                     // Delaying the next step if the user put a delay
@@ -303,8 +305,7 @@ END</div>
                     if(worker.getErrors().length != 0) {
                         alert(worker.getErrors());
                     }
-                }
-                    
+                }                    
             })();
         }
 
@@ -329,9 +330,9 @@ END</div>
             initializeRegisters();
 
             if(!worker.emulationStep()) {
-                UIUpdate(worker, 0);
+                UIUpdate(worker, memory_starting_point);
             } else {
-                UIUpdate(worker, 0);
+                UIUpdate(worker, memory_starting_point);
                 ended = true;
                 if(worker.getException())
                     setLastInstruction(worker.getException());
@@ -345,6 +346,7 @@ END</div>
         function reset() {
             ended = false;
             started = false;
+            stopped = true;
             memory_starting_point = 0;
             UIReset();
             console.log("Emulation reset");

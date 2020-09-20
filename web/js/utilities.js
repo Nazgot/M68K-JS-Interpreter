@@ -13,10 +13,6 @@ function isNoOPsInstruction(operation) {
     return options.some(opt => opt == operation);
 }
 
-function areSectionsValid(simhalt, end) {
-    return simhalt && end;
-}
-
 function eraseWord(register) {
     return register & 0xFFFF0000;
 }
