@@ -47,3 +47,14 @@ function sleep(milliseconds) {
       }
     }
 }
+
+function type_to_size(type) {
+    switch(type) {
+        case Emulator.CODE_BYTE:
+            return Emulator.SIZE_BYTE;
+        case Emulator.CODE_WORD:
+            return Emulator.SIZE_WORD;
+        case Emulator.CODE_LONG:
+            return Emulator.SIZE_LONG;
+    }
+}

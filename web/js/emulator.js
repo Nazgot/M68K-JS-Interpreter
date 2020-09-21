@@ -30,6 +30,7 @@ class Emulator {
     static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gmi };
     static get EQU_REGEX() { return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+equ\s+[0-9]+$/gmi };
     static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))([A-Za-z_][_A-Z0-9a-z]+)/gmi };
+    static get ORG_REGEX() {return /^org\s+\$([0-9]+)/gmi };
     
     constructor(program) {
 
@@ -40,6 +41,7 @@ class Emulator {
         this.memory = new Memory();
         this.labels = {};
         this.endPointer = undefined;
+        this.org_offset = undefined;
         this.lastInstruction;
         this.exception = undefined;
         this.errors = [];
@@ -114,25 +116,44 @@ class Emulator {
             // Ignoring empty lines and comments
             if(instruction != '') {
                 // Saving both the instruction and it's original line number for debug purposes
-                uncommentedProgram.push([instruction, i + 1]);
-            }
-                
+                uncommentedProgram.push([instruction.trim(), i + 1]);
+            }                
         }
         this.instructions = uncommentedProgram;
     }
 
     findLabels() {
         var length = this.instructions.length;
-        for(var i = length - 1; i >= 0; --i) {
+        //for(var i = length - 1; i >= 0; --i) {
+        for(var i = 0; true; i++) {
+            if(i >= this.instructions.length) 
+                break;
 
             var instruction = this.instructions[i][0].toLowerCase();
+   
+            var res = Emulator.ORG_REGEX.exec(instruction);
+            if(res) {
+                this.org_offset = parseInt(res[1], 16);   
+                this.instructions[i][2] = true;
+                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
+                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
+                continue;    
+            }
 
             // Looking for end directive
             if(instruction == "end") {
+
+                if(this.endPointer !== undefined) {
+                    this.exception = Strings.DUPLICATE_END + Strings.AT_LINE + this.instructions[i][1];
+                    return;
+                }
+
                 this.endPointer = [i + 1, this.instructions[i][1]]; // Only used as proof that END exists, will be updated later
                 // Removing all lines after END directive
                 this.instructions.splice(i + 1, this.instructions.length - i);
                 this.instructions[i][2] = true;
+                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
+                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
                 continue;
             }
 
@@ -152,7 +173,7 @@ class Emulator {
             }
 
             // Checking if the current instruction is a DC.X
-            var res = Emulator.DC_REGEX.exec(instruction);
+            res = Emulator.DC_REGEX.exec(instruction);
             // If it is a DC.X
             if(res != null) {
 
@@ -201,9 +222,15 @@ class Emulator {
                     // For each element of the data list
                     for(var t = 0, j = i + 1; t < tmp.length; j++, t++) {
                         // We splice the elements pushing the following lines forward
-                        this.instructions.splice(j, 0, [list[t], i + 1, true]) ;                                              
+                        this.instructions.splice(j, 0, ["" + list[t], i + 1, true]) ;                                              
+                    }
+
+                    for(t = 0; t < 2 + tmp.length * type_to_size(size) / 8; t++) {
+                        this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
                     }
                     
+                    this.org_offset += (2 + tmp.length * type_to_size(size) / 8);
+                    i += tmp.length;
                     continue;
                 }
 
@@ -214,6 +241,13 @@ class Emulator {
                     this.labels[label] = i;
                     this.instructions[i] = [label + ":", i + 1, true];
                     this.instructions.splice(i + 1, 0, [tmp, i + 1, true]);
+
+                    for(t = 0; t < 2 + type_to_size(size) / 8; t++) {
+                        this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
+                    }
+                    this.org_offset += (2 + type_to_size(size) / 8);
+                    ++i;
+
                     continue;
                 } 
             } 
@@ -228,6 +262,13 @@ class Emulator {
                 this.instructions[i] = [instruction, i + 1, true];
                 continue;
             }
+
+            for(t = 0; t < this.instruction_size(instruction); t++) {
+                this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
+            }
+
+            this.org_offset += this.instruction_size(instruction);
+            
         }
 
         // Linking labels to instructions
@@ -483,7 +524,7 @@ class Emulator {
 
         // If the instruction is a label, skip it
         if(flag === true) {
-            console.log("skipping label");
+            console.log("Skipping label or directive at line " + this.line);
             return false;
         }
 
@@ -2594,4 +2635,202 @@ class Emulator {
                 break;
         }
     }
+    
+    instruction_size(instruction) {
+
+        // Checking if the instruction is an instruction that doesn't require operators
+        var noOPS = isNoOPsInstruction(instruction);
+    
+        // If the instruction is well formatted
+        if(instruction.indexOf(' ') != -1 || noOPS ) {
+            var operation;
+             
+            
+            if(!noOPS) {
+                // We check if the instruction has a specified size
+                if(instruction.indexOf('.') != -1) 
+                    operation = instruction.substring(0, instruction.indexOf('.')).trim();
+                else
+                    operation = instruction.substring(0, instruction.indexOf(' ')).trim();
+    
+                var operands = instruction.substring(instruction.indexOf(' ') + 1, instruction.length).split(',');
+                var size = this.parseOpSize(instruction);
+            } else 
+                operation = instruction;
+            
+            switch(operation.toLowerCase()) {
+                case "add":
+                    // ADD OP_SIZE is always 2 bytes
+                    return 2;
+                case "addi":
+                    // ADDI OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "adda":
+                    // ADDA OP_SIZE is always 2 bytes
+                    return 2;
+                case "move":
+                    // MOVE OP_SIZE is always 2 bytes
+                    return 2;
+                case "movea":
+                    // MOVEA OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "sub":
+                    // SUB OP_SIZE is always 2 bytes
+                    return 2;
+                case "subi":
+                    // SUBI OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "suba":
+                    // SUBA OP_SIZE is always 2 bytes
+                    return 2;
+                case "mulu":
+                    // MULU OP_SIZE is always 2 bytes
+                    return 2;
+                case "muls":
+                    // MULS OP_SIZE is always 2 bytes
+                    return 2;
+                case "divu":
+                    // DIVU OP_SIZE is always 2 bytes
+                    return 2;
+                case "divs":
+                    // DIVS OP_SIZE is always 2 bytes
+                    return 2;
+                case "swap":
+                    // SWAP OP_SIZE is always 2 bytes
+                    return 2;
+                case "exg":
+                    // EXG OP_SIZE is always 2 bytes
+                    return 2;
+                case "clr":
+                    // EXG OP_SIZE is always 2 bytes
+                    return 2;
+                case "not":
+                    // NOT OP_SIZE is always 2 bytes
+                    return 2;
+                case "and":
+                   // AND OP_SIZE is always 2 bytes
+                   return 2;
+                case "andi":
+                    // ANDI OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "or":
+                    // OR OP_SIZE is always 2 bytes
+                   return 2;
+                case "ori":
+                    // ORI OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "eor":
+                    // EOR OP_SIZE is always 2 bytes
+                   return 2;
+                case "eori":
+                    // EORI OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "neg":
+                    // NEG OP_SIZE is always 2 bytes
+                   return 2;
+                case "ext":
+                    // EXT OP_SIZE is always 2 bytes
+                   return 2;
+                case "lsl":
+                    // LSL OP_SIZE is always 2 bytes
+                   return 2;
+                case "lsr":
+                    // LSR OP_SIZE is always 2 bytes
+                   return 2;
+                case "asl":
+                    // ASL OP_SIZE is always 2 bytes
+                   return 2;
+                case "asr":
+                    // ASR OP_SIZE is always 2 bytes
+                   return 2;
+                case "rol": 
+                    // ROL OP_SIZE is always 2 bytes
+                   return 2;
+                case "ror": 
+                    // ROR OP_SIZE is always 2 bytes
+                   return 2;
+                case "cmp":
+                    // CMP OP_SIZE is always 2 bytes
+                   return 2;
+                case "cmpa":
+                    // CMPA OP_SIZE is always 2 bytes
+                   return 2;
+                case "cmpi":
+                    // CMPI OP_SIZE is 2 bytes + 4, 2, 1 bytes for LONG, WORD, BYTE size respectively
+                    return 2 + type_to_size(size) / 8;
+                case "tst":
+                    // CMPA OP_SIZE is always 2 bytes
+                   return 2;
+                case "jmp":
+                    // JMP OP_SIZE is always 2 bytes
+                   return 2;
+                case "jsr":
+                    // JSR OP_SIZE is always 2 bytes
+                   return 2;
+                case "rts":
+                    // JSR OP_SIZE is always 2 bytes
+                   return 2;
+                case "bra":
+                    // BRA OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "bsr":
+                    // BSR OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "beq":
+                    // BEQ OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "bne":
+                    // BNE OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "bge":
+                    // BGE OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "bgt":
+                    // BGT OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "ble":
+                    // BLE OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                case "blt":
+                    // BLT OP_SIZE is 1WORD if the displacemente is just a byte, 2 words if displacement is a word, 3 words otherwise
+                    if(operands[0] <= 0xFF)
+                        return 2;
+                    if(operands[0] <= 0xFFFF)
+                        return 4;
+                    return 6;
+                default:
+                    return 2;             
+            }
+        }
+    }
 }
+
+

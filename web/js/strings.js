@@ -6,6 +6,7 @@ class Strings {
     static get DUPLICATE_LABEL() {return "Execution killed: duplicate label found: "};
     static get UNKNOWN_LABEL() {return "Execution killed: unknown label: "};
     static get SIMHALT_END_MISSING() {return "Execution killed: END directive missing"};
+    static get DUPLICATE_END() {return "Execution killed: duplicate END directive"};
     
     // Errors
     static get INVALID_OP_SIZE() {return "Invalid operation size (defaulted to word)"};
