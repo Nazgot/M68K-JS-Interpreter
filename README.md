@@ -33,4 +33,4 @@ STEP, RUN, RESET are finally implemented and working (probably).
 
 #### Directives
 
- - EQU
+ - EQU, ORG
