@@ -960,6 +960,21 @@ class Emulator {
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
+
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString() :
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+                this.addi(size, op1, op2, is_sub);
+                break;
+
+            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+                this.adda(size, op1, op2, is_sub);
+                break;
+            
         }
     }
 
@@ -1173,6 +1188,14 @@ class Emulator {
                 this.memory.set(address, res[0], size);
                 this.ccr = res[1];
                 break;
+
+            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+                this.movea(size, op1, op2);
+                break;
         }
     }
 
@@ -1235,7 +1258,7 @@ class Emulator {
                         this.registers[op2.value] = extOP(Emulator.CODE_LONG, addWord(this.memory.getWord(address), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
                         break;
                 }
-            break;
+                break;
         }
     }
 
@@ -1417,6 +1440,12 @@ class Emulator {
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
+            
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+                this.andi(size, op1, op2);
+                break;
         }
     }
 
@@ -1524,6 +1553,12 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+                this.ori(size, op1, op2);
+                break;
+
         }
     }
 
@@ -1608,6 +1643,11 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+                this.eori(size, op1, op2);
+                break;
         }
     }
 
@@ -2142,6 +2182,20 @@ class Emulator {
                 op1 = parseInt(op1.value);
                 res = cmpOP(size, op1, this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
+                break;
+
+            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString():
+                this.cmpa(size, op1, op2);
+                break;
+
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+                this.cmpi(size, op1, op2);
                 break;
         }
     }

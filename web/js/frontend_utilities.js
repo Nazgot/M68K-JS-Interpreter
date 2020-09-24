@@ -17,14 +17,14 @@ function UIUpdate(worker, memory_starting_point) {
 
     // Re-building memory table
     let number =  parseInt(worker.memory.getByte(memory_starting_point >>> 0), 16);
-    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", memory_starting_point, number, number, number);
+    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td><td>%s</td></tr>", memory_starting_point, number, number, number, String.fromCharCode(number));
 
     let loop_starting_position = memory_starting_point + 1;
     let loop_ending_position = memory_starting_point + 10;
 
     for( i = loop_starting_position; i < loop_ending_position; i++) {
         let number =  parseInt(worker.memory.getByte(i >>> 0), 16);
-        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", i, number, number, number);
+        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td><td>%s</td></tr>", i, number, number, number, String.fromCharCode(number));
     }
     document.getElementById('memory').innerHTML = HTMLMemoria;
 
@@ -48,10 +48,10 @@ function UIReset() {
     document.getElementById('registers').innerHTML = HTMLRegistri;
 
     // Clearing memory table
-    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", 0, 0, 0 >>> 0, 0 >>> 0);
+    var HTMLMemoria = sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td><td> </td></tr>", 0, 0, 0 >>> 0, 0 >>> 0);
 
     for( i = 1; i < 10; i++) {
-        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td></tr>", i, 0, 0 >>> 0, 0 >>> 0);
+        HTMLMemoria += sprintf("<tr><td>0x%08x</td><td>%d</td><td>0x%02x</td><td>%08b</td><td> </td></tr>", i, 0, 0 >>> 0, 0 >>> 0);
     }
     document.getElementById('memory').innerHTML = HTMLMemoria;
 
