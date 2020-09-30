@@ -44,7 +44,7 @@ ace.define("ace/mode/m68k_highlight_rules", ["require", "exports", "module", "ac
                 { token: 'string.m68k', regex: /"([^\\"]|\\.)*"/ },
                 {
                     token: 'support.function.directive.m68k',
-                    regex: '(?:SIMHALT|END|DC|EQU)',
+                    regex: '(?:ORG|END|DC|EQU)',
                     caseInsensitive: true
                 },
                 { token: 'entity.name.function.label.m68k', regex: '^[a-zA-Z_]+[a-zA-z0-9]*\:' },

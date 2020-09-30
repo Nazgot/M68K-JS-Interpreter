@@ -45,6 +45,7 @@ textarea {
 #registers td,
 #memory td {
     vertical-align: middle;
+    text-align: center;
     padding-top: 4px;
     padding-bottom: 4px;
     padding-left: 3px;
@@ -69,3 +70,14 @@ textarea {
     left: 0;
 }
 
+#registers-head th {
+    width: 33%;
+    vertical-align: middle;
+    text-align: center;
+}
+
+#memory-head th {
+    width: 20%;
+    vertical-align: middle;
+    text-align: center;
+}
