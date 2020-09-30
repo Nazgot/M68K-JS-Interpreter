@@ -59,7 +59,6 @@ function UIReset() {
 }
 
 function initializeRegisters() {
-    
     worker.registers[0] = parseInt(document.getElementById("0").value);
     worker.registers[1] = parseInt(document.getElementById("1").value);
     worker.registers[2] = parseInt(document.getElementById("2").value);

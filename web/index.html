@@ -274,9 +274,10 @@ END</div>
         var register_changed = false;
 
         function go() {
+            
+            if(ended) UIReset();
             ended = false;
             stopped = false;
-            UIReset();
 
             // Disabling the step button
             document.getElementById('step').setAttribute("disabled","disabled");
@@ -296,13 +297,10 @@ END</div>
             }
 
             var registers = new Int32Array(16);
-
-            // Initializing registers with user provided values
-            initializeRegisters();
-
             //Initializing and running the loop at the same time
             (function work() {
                 
+                // Initializing registers with user provided values
                 initializeRegisters();
                 // If the program is not ended
                 if(!stopped && !worker.emulationStep()) {

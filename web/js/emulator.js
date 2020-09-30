@@ -74,6 +74,7 @@ class Emulator {
     debug() {
         console.log("-----------------DEBUG------------------");
         console.log(this.instructions);
+        console.log(this.registers);
         console.log(this.memory);
         console.log(this.labels);
         console.log("-----------------DEBUG------------------");
