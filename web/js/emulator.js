@@ -28,7 +28,7 @@ class Emulator {
 
     // Directives REGEX
     static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gmi };
-    static get EQU_REGEX() { return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+equ\s+([0-9]+)$/gmi };
+    static get EQU_REGEX() { return /^([_a-zA-Z][_a-zA-Z0-9]*)\:\s+equ\s+([0-9]+)$/gmi };
     static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))([A-Za-z_][_A-Z0-9a-z]+)/gmi };
     static get ORG_REGEX() {return /^org\s+\$([0-9]+)/gmi };
     
@@ -257,11 +257,10 @@ class Emulator {
             // Checkign if the instruction is an EQU
             res = Emulator.EQU_REGEX.exec(instruction);
             if(res != null) {
-                var label = instruction.substring(0, instruction.indexOf(':'));
-                var tmp = res[1];
+                console.log(res);
+                var label = res[1];
+                var tmp = res[2];
                 this.labels[label] = tmp;
-                console.log("label: " + label);
-                console.log("tmp: " + res[1]);
                 this.instructions[i] = [instruction, i + 1, true];
                 continue;
             }
