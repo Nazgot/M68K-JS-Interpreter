@@ -64,16 +64,16 @@ class Memory {
     
     setWord(address, value) {
         address = address >>> 0;
-        this.setByte(address + 1, value);
-        this.setByte(address, value >>> 8);
+        this.setByte(address + 0, value);
+        this.setByte(address + 1, value >>> 8);
     }
 
     setLong(address, value) {
         address = address >>> 0;
-        this.setByte(address + 3, value >>> 0);
-        this.setByte(address + 2, value >>> 8); 
-        this.setByte(address + 1, value >>> 16);
-        this.setByte(address + 0, value >>> 24);
+        this.setByte(address + 0, value >>> 0);
+        this.setByte(address + 1, value >>> 8); 
+        this.setByte(address + 2, value >>> 16);
+        this.setByte(address + 3, value >>> 24);
     }
 
     isValidAddress(address) {
