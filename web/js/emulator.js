@@ -257,7 +257,6 @@ class Emulator {
             // Checkign if the instruction is an EQU
             res = Emulator.EQU_REGEX.exec(instruction);
             if(res != null) {
-                console.log(res);
                 var label = res[1];
                 var tmp = res[2];
                 this.labels[label] = tmp;
