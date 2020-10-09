@@ -167,9 +167,11 @@ END</div>
                     <input type="text" id="memory-address" class="form-control" placeholder="0x00000000"
                         value="0x00000000">
                 </div>
-                <button id="memory-go" class="btn btn-primary" onclick="moveMemory()">Go</button>
+                <button id="memory-go" class="btn btn-primary" style="margin-left: 1px" onclick="moveMemory()">Go</button>
+                <button id="memory-next" class="btn btn-primary" style="margin-left: 1px" onclick="memoryPrevious()">&lt;</button>
+                <button id="memory-previous" class="btn btn-primary" style="margin-left: 1px" onclick="memoryNext()">&gt;</button>
                 <a id="memoryDownload" style="display:none"></a>
-                <button id="memory-download" class="btn btn-primary" onclick="memoryDownload()">Download!</button>
+                <button id="memory-download" class="btn btn-primary" style="margin-left: 1px" onclick="memoryDownload()">Download!</button>
             </div>
             <br>
             <div id="memory-table" class="table-responsive">
@@ -314,7 +316,7 @@ END</div>
                     if(worker.getException())
                         setLastInstruction(worker.getException());
                     if(worker.getErrors().length != 0) {
-                        alert(worker.getErrors());
+                        displayErrors(worker.getErrors());
                     }
                 }                    
             })();
@@ -348,7 +350,7 @@ END</div>
                 if(worker.getException())
                     setLastInstruction(worker.getException());
                 if(worker.getErrors().length != 0) {
-                    alert(worker.getErrors());
+                    displayErrors(worker.getErrors());
                 }
                 document.getElementById('step').setAttribute("disabled","disabled");
             }
@@ -369,6 +371,19 @@ END</div>
             startsAt = startsAt.substring(2);
             memory_starting_point = parseInt(startsAt, 16);
             UIUpdate(worker, parseInt(startsAt, 16));
+        }
+        
+        function memoryNext() {
+            memory_starting_point += 10;
+            UIUpdate(worker, memory_starting_point);
+        }
+        
+        function memoryPrevious() {
+            if(memory_starting_point >= 10)
+                memory_starting_point -= 10;
+            else 
+                memory_starting_point = 0;
+            UIUpdate(worker, memory_starting_point);
         }
 
     </script>

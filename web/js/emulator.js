@@ -64,7 +64,7 @@ class Emulator {
         this.findLabels();
         // Checking if END directive is defined
         if(!this.endPointer){
-            this.exception = Strings.SIMHALT_END_MISSING;
+            this.exception = Strings.END_MISSING;
             return;
         }
         
@@ -189,7 +189,7 @@ class Emulator {
                 // We extract the instruction (DC.X <string> OR DC.X <data list>)
                 var tmp = instruction.substring(instruction.indexOf(':') + 1, instruction.length - 1).trim();
 
-                var size = this.parseOpSize(tmp);
+                var size = this.parseOpSize(tmp, false);
                 var isString = false;
                 isString = tmp.indexOf('"') != -1;
 
@@ -262,8 +262,9 @@ class Emulator {
                 this.instructions[i] = [instruction, i + 1, true];
                 continue;
             }
-
-            for(t = 0; t < this.instruction_size(instruction); t++) {
+            
+            let for_length = this.instruction_size(instruction);
+            for(t = 0; t < for_length; t++) {
                 this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
             }
 
@@ -327,8 +328,7 @@ class Emulator {
         this.instructions.splice(this.endPointer, 0, ["jmp " + ((-this.endPointer - 1 ) << 2).toString(), undefined]); // 2 bit left shift for pc alignment, this is a relative jump
     }
 
-    parseOpSize(instruction) {
-        
+    parseOpSize(instruction, errors_suppressed) {
         if(instruction.indexOf('.') != -1) {
             // We get the char after the . (if any)
             var size = instruction.charAt(instruction.indexOf('.') + 1);
@@ -340,8 +340,9 @@ class Emulator {
                 case 'l': 
                     return Emulator.CODE_LONG;
                 default: 
-                    this.errors.push(Strings.INVALID_OP_SIZE + Strings.AT_LINE + this.line);
-                    return Emulator.CODE_WORD;;
+                    if(!errors_suppressed)
+                        this.errors.push(Strings.INVALID_OP_SIZE + Strings.AT_LINE + this.line);
+                    return Emulator.CODE_WORD;
             }
         }
         else {
@@ -513,7 +514,7 @@ class Emulator {
         if(this.exception) 
             return true;   
 
-        // If we reached the end of instructions or we reached the .data section again the program is ended
+        // If we reached the end of instructions the program ends
         if( this.pc / 4 >= this.instructions.length) {
             console.log("Program ended");
             return true;
@@ -552,7 +553,7 @@ class Emulator {
                     operation = instruction.substring(0, instruction.indexOf(' ')).trim();
 
                 var operands = instruction.substring(instruction.indexOf(' ') + 1, instruction.length).split(',');
-                var size = this.parseOpSize(instruction);
+                var size = this.parseOpSize(instruction, false);
             } else 
                 operation = instruction;
             
@@ -2714,7 +2715,7 @@ class Emulator {
                     operation = instruction.substring(0, instruction.indexOf(' ')).trim();
     
                 var operands = instruction.substring(instruction.indexOf(' ') + 1, instruction.length).split(',');
-                var size = this.parseOpSize(instruction);
+                var size = this.parseOpSize(instruction, true);
             } else 
                 operation = instruction;
             

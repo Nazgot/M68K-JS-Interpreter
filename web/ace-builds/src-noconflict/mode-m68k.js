@@ -20,7 +20,7 @@ ace.define("ace/mode/m68k_highlight_rules", ["require", "exports", "module", "ac
                 },
                 {
                     token: 'constant.numeric.decimal.m68k',
-                    regex: '\\b#[0-9]+\\b'
+                    regex: '#[0-9]+'
                 },
                 {
                     token: 'constant.numeric.decimal.m68k',
@@ -29,6 +29,21 @@ ace.define("ace/mode/m68k_highlight_rules", ["require", "exports", "module", "ac
                 {
                     token: 'constant.numeric.hexadecimal.m68k',
                     regex: '\\#\\$[A-F0-9]+',
+                    caseInsensitive: true
+                },
+                {
+                    token: 'constant.numeric.hexadecimal.m68k',
+                    regex: '\\$[A-F0-9]+',
+                    caseInsensitive: true
+                },
+                {
+                    token: 'constant.numeric.hexadecimal.m68k',
+                    regex: '\\#0x[A-F0-9]+',
+                    caseInsensitive: true
+                },
+                {
+                    token: 'constant.numeric.hexadecimal.m68k',
+                    regex: '0x[A-F0-9]+',
                     caseInsensitive: true
                 },
                 {

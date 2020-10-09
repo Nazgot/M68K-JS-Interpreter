@@ -96,3 +96,11 @@ function memoryDownload() {
 function setLastInstruction(instruction) {
     document.getElementById('last_instruction').innerHTML = instruction;
 }
+
+function displayErrors(errors) {
+    var html = "Errors<br>";
+    for(var i = 0; i < errors.length; i++) {
+        html += errors[i] + "<br>";
+    }
+    document.getElementById('last_instruction').innerHTML = html;
+}

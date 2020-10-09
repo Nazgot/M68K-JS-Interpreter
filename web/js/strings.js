@@ -5,7 +5,7 @@ class Strings {
     static get DIVISION_BY_ZERO() {return "Execution killed: attempted a divide by zero operation."};
     static get DUPLICATE_LABEL() {return "Execution killed: duplicate label found: "};
     static get UNKNOWN_LABEL() {return "Execution killed: unknown label: "};
-    static get SIMHALT_END_MISSING() {return "Execution killed: END directive missing"};
+    static get END_MISSING() {return "Execution killed: END directive missing"};
     static get DUPLICATE_END() {return "Execution killed: duplicate END directive"};
     
     // Errors
