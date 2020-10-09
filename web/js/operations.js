@@ -524,6 +524,7 @@ function tstOP(size, op1, ccr) {
 }
 
 function braOP(size, op, pc) {
+    console.log(op);
     switch(size) {
         case Emulator.CODE_BYTE:
             if(op >= 0) 
@@ -568,10 +569,11 @@ function bgtOP(size, op, pc, ccr) {
 }
 
 function bleOP(size, op, pc, ccr) {
+    console.log("CCR: " + ccr);
     var ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
     var VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
     var NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
-    if( ZFlag || (!VFlag && NFlag) || (Vflag && !NFlag) )  
+    if( ZFlag || (!VFlag && NFlag) || (VFlag && !NFlag) )  
         return braOP(size, op, pc);
     else return [pc, false];                               // Else we just return the pc
 }

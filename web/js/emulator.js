@@ -30,7 +30,7 @@ class Emulator {
     static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gmi };
     static get EQU_REGEX() { return /^([_a-zA-Z][_a-zA-Z0-9]*)\:\s+equ\s+([0-9]+)$/gmi };
     static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))([A-Za-z_][_A-Z0-9a-z]+)/gmi };
-    static get ORG_REGEX() {return /^org\s+\$([0-9]+)/gmi };
+    static get ORG_REGEX() {return /^org\s+(?:0x|\$)([0-9]+)/gmi };
     
     constructor(program) {
 
@@ -124,7 +124,6 @@ class Emulator {
     }
 
     findLabels() {
-        var length = this.instructions.length;
         //for(var i = length - 1; i >= 0; --i) {
         for(var i = 0; true; i++) {
             if(i >= this.instructions.length) 
@@ -291,6 +290,7 @@ class Emulator {
                 if(isJumpImmediate(operation) || isBranch(operation)) {
                     // We get the argoument of the jump (label)
                     var label = operands[operands.length - 1].trim();
+                    console.log("i'm in");
                     // We check if the label actually exists
                     if(this.labels[label] !== undefined) 
                         operands[operands.length - 1] = (this.labels[label] - i) << 2; // Relative jump, 2 bit left shift (X4) to preserve alignment
@@ -306,14 +306,14 @@ class Emulator {
                     // Extracting the label
                     var label = Emulator.IMMEDIATE_LABEL_REPLACE.exec(this.instructions[i][0])[2];
                     // Checking if it is a hex number
-                    if(!isNaN(parseInt(label), 16)) 
+                    if(!isNaN(parseInt(label, 16))) 
                         return;
 
                     // If it is not a number we check if the label actually exists
                     if(this.labels[label] !== undefined) {
                         // Replacing label name with label value
                         this.instructions[i][0] = this.instructions[i][0].replace(Emulator.IMMEDIATE_LABEL_REPLACE, "$1" + this.labels[label]);
-                    } else if(isNaN(parseInt(label)) && isNaN(parseInt(label.substring(1)))) {
+                    } else if(isNaN(parseInt(label, 16)) /*&& isNaN(parseInt(label.substring(1)))*/) {
                         this.exception = Strings.UNKNOWN_LABEL + label;
                         return;
                     }
@@ -486,7 +486,15 @@ class Emulator {
 
         // We check if the token is an offset
         if(token.charAt(0) == '$') {
-            res.value = token.substring(1, token.length);
+            res.value = parseInt("0x" + token.substring(1, token.length), 16);
+            res.type = Emulator.TOKEN_OFFSET;
+            return res;
+        } else if(token.charAt(0) == '%') {
+            res.value = parseInt(token.substring(1, token.length), 2);
+            res.type = Emulator.TOKEN_OFFSET;
+            return res;
+        } else if(!isNaN(parseInt(token))) {
+            res.value = parseInt(token);
             res.type = Emulator.TOKEN_OFFSET;
             return res;
         }
@@ -866,7 +874,8 @@ class Emulator {
                     this.errors.push(Strings.UNRECOGNISED_INSTRUCTION + Strings.AT_LINE + this.line);
                     return false;               
             }
-            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];                
+            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];           
+            console.log("PC: ", this.pc);     
         }
     }
 
@@ -2306,6 +2315,7 @@ class Emulator {
     }
 
     bra(size, op) {
+        console.log(op);
         op = parseInt(op);
         var res = braOP(size, op, this.pc);
         if(res[1]) {
@@ -2313,6 +2323,7 @@ class Emulator {
             this.errors.push(Strings.BRA_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
+        console.log(res);
         this.pc = res[0];
         return;
     }
@@ -2337,7 +2348,7 @@ class Emulator {
 
     beq(size, op) {
         op = parseInt(op);
-        var res = beqOP(size, op, this.pc);
+        var res = beqOP(size, op, this.pc, this.ccr);
         if(res[1]) {
             this.errors.push(Strings.BEQ_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
@@ -2348,7 +2359,7 @@ class Emulator {
 
     bne(size, op) {
         op = parseInt(op);
-        var res = bneOP(size, op, this.pc);
+        var res = bneOP(size, op, this.pc, this.ccr);
         if(res[1]) {
             this.errors.push(Strings.BNE_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
@@ -2359,7 +2370,7 @@ class Emulator {
 
     bge(size, op) {
         op = parseInt(op);
-        var res = bgeOP(size, op, this.pc);
+        var res = bgeOP(size, op, this.pc, this.ccr);
         if(res[1]) {
             this.errors.push(Strings.BGE_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
@@ -2370,7 +2381,7 @@ class Emulator {
 
     bgt(size, op) {
         op = parseInt(op);
-        var res = bgtOP(size, op, this.pc);
+        var res = bgtOP(size, op, this.pc, this.ccr);
         if(res[1]) {
             this.errors.push(Strings.BGT_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
@@ -2381,7 +2392,7 @@ class Emulator {
 
     ble(size, op) {
         op = parseInt(op);
-        var res = bleOP(size, op, this.pc);
+        var res = bleOP(size, op, this.pc, this.ccr);
         if(res[1]) {
             this.errors.push(Strings.BLE_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
@@ -2392,7 +2403,7 @@ class Emulator {
 
     blt(size, op) {
         op = parseInt(op);
-        var res = bltOP(size, op, this.pc);
+        var res = bltOP(size, op, this.pc, this.ccr);
         if(res[1]) {
             this.errors.push(Strings.BLT_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;

@@ -1,5 +1,5 @@
 function isBranch(operation) {
-    var options = ["bra.w", "bra.b", "bsr"];
+    var options = ["bra", "ble", "bsr", "beq", "bge", "bgt", "ble", "blt", "bne"];
     return options.some(opt => opt == operation);
 }
 
