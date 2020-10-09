@@ -15,30 +15,30 @@ class Memory {
 
     // Gets a word from memory
     getWord(address) {
-        var firstBytes = this.getByte(address + 1);
+        var firstBytes = this.getByte(address + 0);
 
-        if(!this.isValidAddress(address))  // Check if the next byte is still in a valid address
+        if(!this.isValidAddress(address + 1))  // Check if the next byte is still in a valid address
             return undefined;
 
-        var secondBytes = this.getByte(address);
+        var secondBytes = this.getByte(address + 1);
         return parseInt( firstBytes + secondBytes, 16);
     }
 
     // Gets a long-word from memory
     getLong(address) {
-        var firstBytes = this.getByte(address + 3);
-        if(!this.isValidAddress(address + 2)) 
-            return undefined;
-
-        var secondBytes = this.getByte(address + 2);
+        var firstBytes = this.getByte(address + 0);
         if(!this.isValidAddress(address + 1)) 
             return undefined;
 
-        var thirdBytes = this.getByte(address + 1);
-        if(!this.isValidAddress(address)) 
+        var secondBytes = this.getByte(address + 1);
+        if(!this.isValidAddress(address + 2)) 
             return undefined;
 
-        var fourthBytes = this.getByte(address + 0);
+        var thirdBytes = this.getByte(address + 2);
+        if(!this.isValidAddress(address + 3)) 
+            return undefined;
+
+        var fourthBytes = this.getByte(address + 3);
         return parseInt(firstBytes + secondBytes + thirdBytes + fourthBytes, 16);
     }
 
@@ -64,16 +64,16 @@ class Memory {
     
     setWord(address, value) {
         address = address >>> 0;
-        this.setByte(address + 0, value);
-        this.setByte(address + 1, value >>> 8);
+        this.setByte(address + 0, value  >>> 8);
+        this.setByte(address + 1, value);
     }
 
     setLong(address, value) {
         address = address >>> 0;
-        this.setByte(address + 0, value >>> 0);
-        this.setByte(address + 1, value >>> 8); 
-        this.setByte(address + 2, value >>> 16);
-        this.setByte(address + 3, value >>> 24);
+        this.setByte(address + 0, value >>> 24);
+        this.setByte(address + 1, value >>> 16); 
+        this.setByte(address + 2, value >>> 8);
+        this.setByte(address + 3, value >>> 0);
     }
 
     isValidAddress(address) {

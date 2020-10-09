@@ -290,7 +290,6 @@ class Emulator {
                 if(isJumpImmediate(operation) || isBranch(operation)) {
                     // We get the argoument of the jump (label)
                     var label = operands[operands.length - 1].trim();
-                    console.log("i'm in");
                     // We check if the label actually exists
                     if(this.labels[label] !== undefined) 
                         operands[operands.length - 1] = (this.labels[label] - i) << 2; // Relative jump, 2 bit left shift (X4) to preserve alignment
@@ -874,8 +873,7 @@ class Emulator {
                     this.errors.push(Strings.UNRECOGNISED_INSTRUCTION + Strings.AT_LINE + this.line);
                     return false;               
             }
-            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];           
-            console.log("PC: ", this.pc);     
+            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];
         }
     }
 
@@ -2315,15 +2313,12 @@ class Emulator {
     }
 
     bra(size, op) {
-        console.log(op);
-        op = parseInt(op);
         var res = braOP(size, op, this.pc);
         if(res[1]) {
             console.log("Offset too long for bra");
             this.errors.push(Strings.BRA_OFFSET_TOO_LONG + String.AT_LINE + this.line);
             return;
         }
-        console.log(res);
         this.pc = res[0];
         return;
     }
