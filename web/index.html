@@ -106,6 +106,11 @@ END</div>
                                 <td>d7</td>
                                 <td>0</td>
                         </tbody>
+                        <tbody id="PC">
+                            <td>0</td>
+                            <td>PC</td>
+                            <td>0</td>
+                        </tbody>
                     </table>
                     <a id="registerDownload" style="display:none"></a>
                     <button id="register-download" class="btn btn-primary btn-lg" onclick="registersDownload()">Download Registri!</button>
@@ -125,7 +130,7 @@ END</div>
                     <div class="btn-group">
                         <button id="run" class="btn btn-success btn-lg" onclick="go()">Run</button>
                     </div>
-                    <div class="btn-group" padding-left="2px">
+                    <div class="btn-group" style="padding-left: 2px">
                         <input type="number" id="delay" value="0">
                         <small id="delayHelp" class="form-text text-muted">Delay (in secondi)</small>
                     </div>
@@ -281,24 +286,26 @@ END</div>
             ended = false;
             stopped = false;
 
-            // Disabling the step button
-            document.getElementById('step').setAttribute("disabled","disabled");
+            if(!started) {
+                // Disabling the step button
+                document.getElementById('step').setAttribute("disabled","disabled");
 
-            // Retrieving the code
-            var code = editor.getValue();
-            // Retriving the user desired delay in seconds -> milliseconds
-            var delay = parseInt(document.getElementById('delay').value) * 1000;
-            console.log("Starting emulation with delay of " + delay + "ms");
-            
-            worker = new Emulator(code);
+                // Retrieving the code
+                var code = editor.getValue();
+                // Retriving the user desired delay in seconds -> milliseconds
+                var delay = parseInt(document.getElementById('delay').value) * 1000;
+                console.log("Starting emulation with delay of " + delay + "ms");
 
-            // Managing pre processing exceptions
-            if(worker.getException()) {
-                setLastInstruction(worker.getException());
-                return;
+                worker = new Emulator(code);
+
+                // Managing pre processing exceptions
+                if(worker.getException()) {
+                    setLastInstruction(worker.getException());
+                    return;
+                }
+                var registers = new Int32Array(16);
             }
-
-            var registers = new Int32Array(16);
+                        
             //Initializing and running the loop at the same time
             (function work() {
                 

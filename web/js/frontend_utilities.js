@@ -30,6 +30,8 @@ function UIUpdate(worker, memory_starting_point) {
 
     // Setting the text for the last elapsed instruction
     document.getElementById('last_instruction').innerHTML = worker.getLastInstruction();
+    // Setting the text for the program counter
+    document.getElementById('PC').innerHTML = sprintf("<td>%d</td><td>PC</td><td>0x%08x</td>", worker.getPC(), worker.getPC());
 }
 
 function UIReset() {
@@ -56,6 +58,8 @@ function UIReset() {
     document.getElementById('memory').innerHTML = HTMLMemoria;
 
     document.getElementById('last_instruction').innerHTML = Strings.LAST_INSTRUCTION_DEFAULT_TEXT;
+
+    document.getElementById('PC').innerHTML = "<td>0</td><td>PC</td><td>0</td>";
 }
 
 function initializeRegisters() {

@@ -67,6 +67,8 @@ class Emulator {
             this.exception = Strings.END_MISSING;
             return;
         }
+
+        this.lastInstruction = this.instructions[0][0];
         
         this.debug();
     }
@@ -74,6 +76,7 @@ class Emulator {
     debug() {
         console.log("-----------------DEBUG------------------");
         console.log(this.instructions);
+        console.log(this.cloned_instructions);
         console.log(this.registers);
         console.log(this.memory);
         console.log(this.labels);
@@ -88,6 +91,10 @@ class Emulator {
 
     getException() {
         return this.exception;
+    }
+
+    getPC() {
+        return this.pc;
     }
 
     getRegisters() {
@@ -114,6 +121,8 @@ class Emulator {
             // If we find a comment (starting with *), we replace the line with ''
             if(instruction.indexOf('*') != -1) 
                 instruction = instruction.substring(0, instruction.indexOf('*')).trim();
+            if(instruction.indexOf(';') != -1) 
+                instruction = instruction.substring(0, instruction.indexOf(';')).trim();
             // Ignoring empty lines and comments
             if(instruction != '') {
                 // Saving both the instruction and it's original line number for debug purposes
@@ -509,7 +518,6 @@ class Emulator {
     }
 
     emulationStep() {
-        
         // Checking if an exeption has occurred during last instruction
         if(this.exception) 
             return true;   
@@ -517,6 +525,7 @@ class Emulator {
         // If we reached the end of instructions the program ends
         if( this.pc / 4 >= this.instructions.length) {
             console.log("Program ended");
+            this.lastInstruction = this.instructions[this.instructions.length - 1][0];
             return true;
         }
         
@@ -529,6 +538,7 @@ class Emulator {
         var instruction = this.instructions[this.pc / 4][0];
         var flag = this.instructions[this.pc / 4][2];
         this.line = this.instructions[this.pc / 4][1];
+        this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];
         this.pc = this.pc + 4;
 
         // If the instruction is a label, skip it
@@ -874,7 +884,6 @@ class Emulator {
                     this.errors.push(Strings.UNRECOGNISED_INSTRUCTION + Strings.AT_LINE + this.line);
                     return false;               
             }
-            this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];
         }
     }
 
@@ -2314,6 +2323,7 @@ class Emulator {
     }
 
     bra(size, op) {
+        op = parseInt(op)
         var res = braOP(size, op, this.pc);
         if(res[1]) {
             console.log("Offset too long for bra");

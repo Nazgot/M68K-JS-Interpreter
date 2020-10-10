@@ -64,7 +64,9 @@ ace.define("ace/mode/m68k_highlight_rules", ["require", "exports", "module", "ac
                 },
                 { token: 'entity.name.function.label.m68k', regex: '^[a-zA-Z_]+[a-zA-z0-9]*\:' },
                 //{ token: 'entity.name.function.label.m68k', regex: '\\s[a-zA-Z_]+[a-zA-z0-9]*' },
-                { token: 'comment.m68k', regex: '\\*.*' }]
+                { token: 'comment.m68k', regex: '\\*.*' },
+                { token: 'comment.m68k', regex: '\\;.*' }
+            ]
         };
 
         this.normalizeRules();

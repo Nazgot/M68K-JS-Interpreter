@@ -82,7 +82,7 @@ textarea {
     text-align: center;
 }
 
-#margined {
-    margin-left: 1em !important;
-    margin-right: 1em !important;
+#PC {
+    text-align: center;
+    size: 33%;
 }
