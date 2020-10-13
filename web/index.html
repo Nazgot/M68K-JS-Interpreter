@@ -122,7 +122,10 @@ END</div>
             <div class="col-md-6">
                 <div class="btn-group-justified" role="group" >
                     <div class="btn-group" >
-                        <button id="reset" class="btn btn-primary btn-lg" onclick="reset()">Reset</button>
+                        <button id="undo" class="btn btn-primary btn-lg" onclick="undo()">Undo</button>
+                    </div>
+                    <div class="btn-group" >
+                        <button id="reset" class="btn btn-danger btn-lg" onclick="reset()">Reset</button>
                     </div>
                     <div class="btn-group">
                         <button id="step" class="btn btn-warning btn-lg" onclick="step()">Step</button>
@@ -263,6 +266,7 @@ END</div>
     <script type="text/javascript" src="js/operations.js"></script>
     <script type="text/javascript" src="js/frontend_utilities.js"></script>
     <script type="text/javascript" src="js/strings.js"></script>
+    <script type="text/javascript" src="js/undo.js"></script>
     <script type="text/javascript" src="js/emulator.js"></script>
     <script src="./ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
@@ -390,6 +394,11 @@ END</div>
                 memory_starting_point -= 10;
             else 
                 memory_starting_point = 0;
+            UIUpdate(worker, memory_starting_point);
+        }
+
+        function undo() {
+            worker.undoFromStack();
             UIUpdate(worker, memory_starting_point);
         }
 

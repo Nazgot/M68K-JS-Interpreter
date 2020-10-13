@@ -5,6 +5,14 @@ class Memory {
         this.memory = {}
     }
 
+    getMemory() {
+        return this.memory;
+    }
+
+    setMemory(memory) {
+        this.memory = Object.assign({}, memory);
+    }
+
     // Gets a single byte from memory
     getByte(address) {
         address = address >>> 0; 

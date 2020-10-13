@@ -39,10 +39,11 @@ class Emulator {
         this.ccr = 0x00;
         this.registers = new Int32Array(16);
         this.memory = new Memory();
+        this.undo = new Undo();
         this.labels = {};
         this.endPointer = undefined;
         this.org_offset = undefined;
-        this.lastInstruction;
+        this.lastInstruction = Strings.LAST_INSTRUCTION_DEFAULT_TEXT;
         this.exception = undefined;
         this.errors = [];
 
@@ -69,7 +70,8 @@ class Emulator {
         }
 
         this.lastInstruction = this.instructions[0][0];
-        
+        // Pushing the first empty frame into the undo stack
+        this.undo.push(this.pc, this.ccr, this.registers, this.memory.getMemory(), this.errors, Strings.LAST_INSTRUCTION_DEFAULT_TEXT, this.line);
         this.debug();
     }
 
@@ -111,6 +113,19 @@ class Emulator {
 
     getErrors() {
         return this.errors;
+    }
+
+    undoFromStack() {
+        let frame = this.undo.pop();
+        if(frame === undefined) 
+            return;
+        this.pc = frame.pc;
+        this.ccr = frame.ccr;
+        this.lastInstruction = frame.lastInstruction;
+        this.line = frame.line;
+        this.registers = [... frame.registers];
+        this.memory.setMemory(frame.memory);
+        this.errors = [... frame.errors];
     }
 
     removeComments() {
@@ -534,6 +549,10 @@ class Emulator {
             this.exception = Strings.INVALID_PC_EXCEPTION;
             return true;
         }
+
+        // Pushing a frame into the stack
+        if(this.pc != 0)
+            this.undo.push(this.pc, this.ccr, this.registers, this.memory.getMemory(), this.errors, this.lastInstruction, this.line);
 
         var instruction = this.instructions[this.pc / 4][0];
         var flag = this.instructions[this.pc / 4][2];
