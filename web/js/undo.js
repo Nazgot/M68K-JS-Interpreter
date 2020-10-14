@@ -16,7 +16,7 @@ class Undo {
             lastInstruction: lastInstruction,
             line: line,
             registers: [... registers],
-            memory: Object.assign({}, memory),
+            memory: {... memory},
             errors: [... errors]
         }
         return frame;

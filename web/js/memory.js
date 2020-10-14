@@ -2,7 +2,7 @@
 class Memory {
 
     constructor() {
-        this.memory = {}
+        this.memory = {};
     }
 
     getMemory() {
@@ -10,7 +10,7 @@ class Memory {
     }
 
     setMemory(memory) {
-        this.memory = Object.assign({}, memory);
+        this.memory = {... memory};
     }
 
     // Gets a single byte from memory
