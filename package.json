@@ -1,0 +1,22 @@
+{
+  "name": "m68k-js-interpreter",
+  "version": "1.0.0",
+  "description": "An easy interpreter written in JavaScript for the M68000 ISA",
+  "main": "js/emulator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nazgot/M68K-JS-Interpreter.git"
+  },
+  "author": "Pietro Ciammaricone",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nazgot/M68K-JS-Interpreter/issues"
+  },
+  "homepage": "https://github.com/Nazgot/M68K-JS-Interpreter#readme",
+  "dependencies": {
+    "browserify": "^17.0.0"
+  }
+}

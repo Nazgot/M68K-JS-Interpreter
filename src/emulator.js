@@ -1,36 +1,6 @@
-class Emulator {
+var constants = require('./constans');
 
-    // Constants
-    // Tokens
-    static get TOKEN_IMMEDIATE() {return 0};
-    static get TOKEN_OFFSET() {return 1};
-    static get TOKEN_REG_ADDR() {return 2};
-    static get TOKEN_REG_DATA() {return 3};
-    static get TOKEN_OFFSET_ADDR() {return 4};
-
-    // Instruction sizes codes
-    static get CODE_LONG() {return 2};
-    static get CODE_WORD() {return 1};
-    static get CODE_BYTE() {return 0};
-
-    // Instruction sizes in bits
-    static get SIZE_LONG() {return 32};
-    static get SIZE_WORD() {return 16};
-    static get SIZE_BYTE() {return 8};
-
-    // Masks
-    static get BYTE_MASK() {return 0x000000FF};
-    static get WORD_MASK() {return 0x0000FFFF};
-    static get LONG_MASK() {return 0xFFFFFFFF};
-    static get MSB_BYTE_MASK() {return 0x80};
-    static get MSB_WORD_MASK() {return 0x8000};
-    static get MSB_LONG_MASK() {return 0x80000000};
-
-    // Directives REGEX
-    static get DC_REGEX() {return /^[_a-zA-Z][_a-zA-Z0-9]*\:\s+dc\.[wbl]\s+("[a-zA-Z0-9]+"|([0-9]+,)*[0-9]+)$/gmi };
-    static get EQU_REGEX() { return /^([_a-zA-Z][_a-zA-Z0-9]*)\:\s+equ\s+([0-9]+)$/gmi };
-    static get IMMEDIATE_LABEL_REPLACE() {return /(#(?:\$?|\%?))([A-Za-z_][_A-Z0-9a-z]+)/gmi };
-    static get ORG_REGEX() {return /^org\s+(?:0x|\$)([0-9]+)/gmi };
+module.exports = class Emulator {
     
     constructor(program) {
 
@@ -155,12 +125,12 @@ class Emulator {
 
             var instruction = this.instructions[i][0].toLowerCase();
    
-            var res = Emulator.ORG_REGEX.exec(instruction);
+            var res = constants.ORG_REGEX.exec(instruction);
             if(res) {
                 this.org_offset = parseInt(res[1], 16);   
                 this.instructions[i][2] = true;
-                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
-                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
+                this.memory.set(this.org_offset++, this.instructions[i][1], constants.CODE_BYTE );
+                this.memory.set(this.org_offset++, this.instructions[i][1], constants.CODE_BYTE );
                 continue;    
             }
 
@@ -176,8 +146,8 @@ class Emulator {
                 // Removing all lines after END directive
                 this.instructions.splice(i + 1, this.instructions.length - i);
                 this.instructions[i][2] = true;
-                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
-                this.memory.set(this.org_offset++, this.instructions[i][1], Emulator.CODE_BYTE );
+                this.memory.set(this.org_offset++, this.instructions[i][1], constants.CODE_BYTE );
+                this.memory.set(this.org_offset++, this.instructions[i][1], constants.CODE_BYTE );
                 continue;
             }
 
@@ -197,7 +167,7 @@ class Emulator {
             }
 
             // Checking if the current instruction is a DC.X
-            res = Emulator.DC_REGEX.exec(instruction);
+            res = constants.DC_REGEX.exec(instruction);
             // If it is a DC.X
             if(res != null) {
 
@@ -224,13 +194,13 @@ class Emulator {
 
                     var list;
                     switch(size) {
-                        case Emulator.CODE_LONG:
+                        case constants.CODE_LONG:
                             list = new Int32Array(tmp.length);
                             break;
-                        case Emulator.CODE_WORD:
+                        case constants.CODE_WORD:
                             list = new Int16Array(tmp.length);
                             break;
-                        case Emulator.CODE_BYTE:
+                        case constants.CODE_BYTE:
                             list = new Int8Array(tmp.length);
                             break;
                         default:
@@ -250,7 +220,7 @@ class Emulator {
                     }
 
                     for(t = 0; t < 2 + tmp.length * type_to_size(size) / 8; t++) {
-                        this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
+                        this.memory.set(this.org_offset + t, this.instructions[i][1], constants.CODE_BYTE);
                     }
                     
                     this.org_offset += (2 + tmp.length * type_to_size(size) / 8);
@@ -267,7 +237,7 @@ class Emulator {
                     this.instructions.splice(i + 1, 0, [tmp, i + 1, true]);
 
                     for(t = 0; t < 2 + type_to_size(size) / 8; t++) {
-                        this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
+                        this.memory.set(this.org_offset + t, this.instructions[i][1], constants.CODE_BYTE);
                     }
                     this.org_offset += (2 + type_to_size(size) / 8);
                     ++i;
@@ -278,7 +248,7 @@ class Emulator {
 
             
             // Checkign if the instruction is an EQU
-            res = Emulator.EQU_REGEX.exec(instruction);
+            res = constants.EQU_REGEX.exec(instruction);
             if(res != null) {
                 var label = res[1];
                 var tmp = res[2];
@@ -289,7 +259,7 @@ class Emulator {
             
             let for_length = this.instruction_size(instruction);
             for(t = 0; t < for_length; t++) {
-                this.memory.set(this.org_offset + t, this.instructions[i][1], Emulator.CODE_BYTE);
+                this.memory.set(this.org_offset + t, this.instructions[i][1], constants.CODE_BYTE);
             }
 
             this.org_offset += this.instruction_size(instruction);
@@ -324,11 +294,11 @@ class Emulator {
                         }
                     // Now the instruction will be replaced with the instruction without the label
                     this.instructions[i][0] = operation + " " + operands.join(',');
-                } else if(Emulator.IMMEDIATE_LABEL_REPLACE.exec(instruction)) {
+                } else if(constants.IMMEDIATE_LABEL_REPLACE.exec(instruction)) {
                     // If we enter here it means we are maybe retrieving a constant
 
                     // Extracting the label
-                    var label = Emulator.IMMEDIATE_LABEL_REPLACE.exec(this.instructions[i][0])[2];
+                    var label = constants.IMMEDIATE_LABEL_REPLACE.exec(this.instructions[i][0])[2];
                     // Checking if it is a hex number
                     if(!isNaN(parseInt(label, 16))) 
                         return;
@@ -336,7 +306,7 @@ class Emulator {
                     // If it is not a number we check if the label actually exists
                     if(this.labels[label] !== undefined) {
                         // Replacing label name with label value
-                        this.instructions[i][0] = this.instructions[i][0].replace(Emulator.IMMEDIATE_LABEL_REPLACE, "$1" + this.labels[label]);
+                        this.instructions[i][0] = this.instructions[i][0].replace(constants.IMMEDIATE_LABEL_REPLACE, "$1" + this.labels[label]);
                     } else if(isNaN(parseInt(label, 16)) /*&& isNaN(parseInt(label.substring(1)))*/) {
                         this.exception = Strings.UNKNOWN_LABEL + label;
                         return;
@@ -358,20 +328,20 @@ class Emulator {
             var size = instruction.charAt(instruction.indexOf('.') + 1);
             switch(size.toLowerCase()) {
                 case 'b':
-                    return Emulator.CODE_BYTE;
+                    return constants.CODE_BYTE;
                 case 'w': 
-                    return Emulator.CODE_WORD;
+                    return constants.CODE_WORD;
                 case 'l': 
-                    return Emulator.CODE_LONG;
+                    return constants.CODE_LONG;
                 default: 
                     if(!errors_suppressed)
                         this.errors.push(Strings.INVALID_OP_SIZE + Strings.AT_LINE + this.line);
-                    return Emulator.CODE_WORD;
+                    return constants.CODE_WORD;
             }
         }
         else {
             // If we do not specify a size we use WORD as default
-            return Emulator.CODE_WORD; 
+            return constants.CODE_WORD; 
         }
     }
 
@@ -431,36 +401,36 @@ class Emulator {
             if(token.indexOf('-') != -1) {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
-                if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+                if(result == undefined || result.type == constants.TOKEN_REG_DATA) {
                     this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res.value = result.value;
-                res.type = Emulator.TOKEN_OFFSET_ADDR;
+                res.type = constants.TOKEN_OFFSET_ADDR;
                 res.offset = -0x1;
                 return res;
             }
             if(token.indexOf('+') != -1) {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
-                if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+                if(result == undefined || result.type == constants.TOKEN_REG_DATA) {
                     this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res.value = result.value ;
-                res.type = Emulator.TOKEN_OFFSET_ADDR;
+                res.type = constants.TOKEN_OFFSET_ADDR;
                 res.offset = 0x1;
                 return res;
             }
             if(token.charAt(0) == '(') {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
-                if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+                if(result == undefined || result.type == constants.TOKEN_REG_DATA) {
                     this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 res.value = result.value;
-                res.type = Emulator.TOKEN_OFFSET_ADDR;
+                res.type = constants.TOKEN_OFFSET_ADDR;
                 res.offset = 0x0;
                 return res;
             } 
@@ -469,24 +439,24 @@ class Emulator {
             // Isolating and parsing the token inside () recursively
             let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
             // Checking if the token inside () is valid
-            if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+            if(result == undefined || result.type == constants.TOKEN_REG_DATA) {
                 this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                 return undefined;
             }
             res.value = result.value;
-            res.type = Emulator.TOKEN_OFFSET_ADDR;
+            res.type = constants.TOKEN_OFFSET_ADDR;
             return res;
         }
 
         // We check if the token is a register
         if(token.charAt(0) == 'a') {
             res.value = this.parseRegisters(token);
-            res.type = Emulator.TOKEN_REG_ADDR;
+            res.type = constants.TOKEN_REG_ADDR;
             return res;
         } 
         if (token.charAt(0) == 'd') {
             res.value = this.parseRegisters(token);
-            res.type = Emulator.TOKEN_REG_DATA;
+            res.type = constants.TOKEN_REG_DATA;
             return res;
         }
 
@@ -494,16 +464,16 @@ class Emulator {
         if(token.charAt(0) == '#') {
             if(token.charAt(1) == '$') {
                 res.value = parseInt("0x" + token.substring(2, token.length));
-                res.type = Emulator.TOKEN_IMMEDIATE;
+                res.type = constants.TOKEN_IMMEDIATE;
                 return res;
             }
             else if(token.charAt(1) == '%') {
                 res.value = parseInt(token.substring(2, token.length), 2);
-                res.type = Emulator.TOKEN_IMMEDIATE;
+                res.type = constants.TOKEN_IMMEDIATE;
                 return res;
             } else {
                 res.value = parseInt(token.substring(1, token.length));
-                res.type = Emulator.TOKEN_IMMEDIATE;
+                res.type = constants.TOKEN_IMMEDIATE;
                 return res;
             }           
         }
@@ -511,15 +481,15 @@ class Emulator {
         // We check if the token is an offset
         if(token.charAt(0) == '$') {
             res.value = parseInt("0x" + token.substring(1, token.length), 16);
-            res.type = Emulator.TOKEN_OFFSET;
+            res.type = constants.TOKEN_OFFSET;
             return res;
         } else if(token.charAt(0) == '%') {
             res.value = parseInt(token.substring(1, token.length), 2);
-            res.type = Emulator.TOKEN_OFFSET;
+            res.type = constants.TOKEN_OFFSET;
             return res;
         } else if(!isNaN(parseInt(token))) {
             res.value = parseInt(token);
-            res.type = Emulator.TOKEN_OFFSET;
+            res.type = constants.TOKEN_OFFSET;
             return res;
         }
 
@@ -916,12 +886,12 @@ class Emulator {
 
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_DATA.toString() : 
 
                 var res , src = this.registers[op1.value];
                 res = addOP(src, this.registers[op2.value], this.ccr, size, is_sub);
@@ -930,7 +900,7 @@ class Emulator {
                 break;
 
             // Example: add.w d0, $5
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -945,7 +915,7 @@ class Emulator {
                 break;
             
             // Example add.w $5, d0
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString() : 
 
                 var address = parseInt(op1.value);
                 
@@ -961,7 +931,7 @@ class Emulator {
                 break;
                        
             // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -975,7 +945,7 @@ class Emulator {
                 break;
             
             // Example: add.w d0, (a0)   ||  add.w d0, $10(a0) ||  TODO: add.w d0, -(a0)
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -990,7 +960,7 @@ class Emulator {
                 break;
 
             // Example : add.w d0, d1
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res , src = this.registers[op1.value];
                 res = addOP(src, this.registers[op2.value], this.ccr, size, is_sub);
@@ -998,17 +968,17 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString() :
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
                 this.addi(size, op1, op2, is_sub);
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_ADDR.toString() :
                 this.adda(size, op1, op2, is_sub);
                 break;
             
@@ -1026,7 +996,7 @@ class Emulator {
         switch(op1.type.toString() + op2.type.toString()) {
 
             // Example: addi.w #$1234, $5
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString() :
 
                 var address = parseInt(op2.value);
 
@@ -1042,7 +1012,7 @@ class Emulator {
                 break;
 
             // Example: addi.w #$1234, (a0)
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1057,7 +1027,7 @@ class Emulator {
                 break;
 
             // Example: addi.w #$1234, d0
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
                 var res , src = parseInt(op1.value);
                 res = addOP(src, this.registers[op2.value], this.ccr, size, is_sub);
                 this.registers[op2.value] = res[0];
@@ -1072,8 +1042,8 @@ class Emulator {
         switch(op1.type.toString() + op2.type.toString()) {
            
             // Example: adda.w a0, a1 || adda.w d0, a1
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
 
                 var res , src = this.registers[op1.value];
                 res = addOP(src, this.registers[op2.value], this.ccr, size, is_sub);
@@ -1082,7 +1052,7 @@ class Emulator {
                 break;
 
             // Example: adda.w $5, a1
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_ADDR.toString() :
 
                 var address = parseInt(op1.value);
 
@@ -1098,7 +1068,7 @@ class Emulator {
                 break;
 
             // Example adda.l (a0), a1 || adda.l $10(a0), a1
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1114,7 +1084,7 @@ class Emulator {
 
 
             // Example adda.b #$AB, a0
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_ADDR.toString() :
 
                 var res , src = parseInt(op1.value);
                 res = addOP(src, this.registers[op2.value], this.ccr, size, is_sub);
@@ -1131,22 +1101,22 @@ class Emulator {
         
         switch(op1.type.toString() + op2.type.toString()) {
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res = moveOP(this.registers[op1.value], this.registers[op2.value], this.ccr, size);
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res = moveOP(parseInt(op1.value), this.registers[op2.value], this.ccr, size);
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = op1.value;
                 
@@ -1160,7 +1130,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1173,8 +1143,8 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1186,7 +1156,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
                 var address = parseInt(op2.value);
                 
                 if(!this.memory.isValidAddress(address)) {
@@ -1199,8 +1169,8 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1213,7 +1183,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1226,11 +1196,11 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString():
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
                 this.movea(size, op1, op2);
                 break;
         }
@@ -1244,28 +1214,28 @@ class Emulator {
         
         switch(op1.type.toString() + op2.type.toString()) {
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
                 switch(size) {
-                    case Emulator.CODE_LONG:
+                    case constants.CODE_LONG:
                         this.registers[op2.value] = this.registers[op1.value]; 
                         break;
-                    case Emulator.CODE_WORD:
+                    case constants.CODE_WORD:
                         this.registers[op2.value] = 0xFFFF0000 + addWord(this.registers[op1.value], this.registers[op2.value] & 0xFFFF0000)[0]; // Force a longword type
                         break;
                 }
                 break;
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_ADDR.toString():
                 switch(size) {
-                    case Emulator.CODE_LONG:
+                    case constants.CODE_LONG:
                         this.registers[op2.value] = parseInt(op1.value);
                         break;
-                    case Emulator.CODE_WORD:
-                        this.registers[op2.value] = extOP(Emulator.CODE_LONG, addWord(parseInt(op1.value), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
+                    case constants.CODE_WORD:
+                        this.registers[op2.value] = extOP(constants.CODE_LONG, addWord(parseInt(op1.value), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
                         break;
                 }
                 break;
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_ADDR.toString() :
                 var address = parseInt(op1.value);
                 
                 if(!this.memory.isValidAddress(address)) {
@@ -1273,26 +1243,26 @@ class Emulator {
                     return undefined;
                 }
                 switch(size) {
-                    case Emulator.CODE_LONG:
+                    case constants.CODE_LONG:
                         this.registers[op2.value] = this.memory.getLong(address);
                         break;
-                    case Emulator.CODE_WORD: 
-                        this.registers[op2.value] = extOP(Emulator.CODE_LONG, addWord(this.memory.getWord(address), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
+                    case constants.CODE_WORD: 
+                        this.registers[op2.value] = extOP(constants.CODE_LONG, addWord(this.memory.getWord(address), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
                         break;
                 }
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
                     return undefined;
                 }
                 switch(size) {
-                    case Emulator.CODE_LONG:
+                    case constants.CODE_LONG:
                         this.registers[op2.value] = this.memory.getLong(address);
                         break;
-                    case Emulator.CODE_WORD: 
-                        this.registers[op2.value] = extOP(Emulator.CODE_LONG, addWord(this.memory.getWord(address), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
+                    case constants.CODE_WORD: 
+                        this.registers[op2.value] = extOP(constants.CODE_LONG, addWord(this.memory.getWord(address), this.registers[op2.value] & 0xFFFF0000)[0], this.ccr)[0]; // Force a longword type
                         break;
                 }
                 break;
@@ -1319,7 +1289,7 @@ class Emulator {
 
     // Swaps the upper word with the lower word of a data register
     swap(op) {
-        if(op.type != Emulator.TOKEN_REG_DATA) {
+        if(op.type != constants.TOKEN_REG_DATA) {
             this.errors.push(Strings.DATA_ONLY_SWAP + Strings.AT_LINE + this.line); 
             return;
         }
@@ -1330,7 +1300,7 @@ class Emulator {
 
     // Swaps the content of a register with the content of another register
     exg(op1, op2) {
-        if((op1.type != Emulator.TOKEN_REG_DATA && op1.type != Emulator.TOKEN_REG_ADDR) || (op2.type != Emulator.TOKEN_REG_DATA && op2.type != Emulator.TOKEN_REG_ADDR)) {
+        if((op1.type != constants.TOKEN_REG_DATA && op1.type != constants.TOKEN_REG_ADDR) || (op2.type != constants.TOKEN_REG_DATA && op2.type != constants.TOKEN_REG_ADDR)) {
                 // ERROR, can only exg data - data , address-address, data - address, address - data;
                 this.errors.push(Strings.EXG_RESTRICTIONS + Strings.AT_LINE + this.line);
                 return;
@@ -1344,12 +1314,12 @@ class Emulator {
     // Can't clr an address register
     clr(size, op) {
         switch(op.type) {
-            case Emulator.TOKEN_REG_DATA :
+            case constants.TOKEN_REG_DATA :
                 var res = clrOP(size, this.registers[op.value], this.ccr);
                 this.registers[op.value] = res[0];
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET :
+            case constants.TOKEN_OFFSET :
 
                 var address = parseInt(op.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1360,7 +1330,7 @@ class Emulator {
                 this.memory.set(address, res[0], size);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR :
+            case constants.TOKEN_OFFSET_ADDR :
 
                 var address = parseInt(this.registers[op.value], 10) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1380,12 +1350,12 @@ class Emulator {
     // Reverses bits of the destination oprand
     not(size, op) {
         switch(op.type) {
-            case Emulator.TOKEN_REG_DATA :
+            case constants.TOKEN_REG_DATA :
                 var res = notOP(size, this.registers[op.value], this.ccr);
                 this.registers[op.value] = res[0];
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET :
+            case constants.TOKEN_OFFSET :
 
                 var address = parseInt(op.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1396,7 +1366,7 @@ class Emulator {
                 this.memory.set(address, res[0], size);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR :
+            case constants.TOKEN_OFFSET_ADDR :
 
                 var address = parseInt(this.registers[op.value], 10) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1419,12 +1389,12 @@ class Emulator {
     and(size, op1, op2) {
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1436,7 +1406,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString():
 
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1448,7 +1418,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -1459,7 +1429,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -1470,16 +1440,16 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 res = andOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
                 this.andi(size, op1, op2);
                 break;
         }
@@ -1490,7 +1460,7 @@ class Emulator {
     // Can't use address registers as destination operands
     andi(size, op1, op2) {
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1502,7 +1472,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1514,7 +1484,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
                 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
 
                 res = andOP(size, parseInt(op1.value), this.registers[op2.value], this.ccr);
                 this.registers[op2.value] = res[0];
@@ -1530,12 +1500,12 @@ class Emulator {
         
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1547,7 +1517,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString():
 
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1559,7 +1529,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1571,7 +1541,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -1582,16 +1552,16 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 res = orOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
                 this.ori(size, op1, op2);
                 break;
 
@@ -1603,7 +1573,7 @@ class Emulator {
     // Can't use address registers as destination operands
     ori(size, op1, op2) {
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1615,7 +1585,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1627,7 +1597,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
                 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
 
                 res = orOP(size, parseInt(op1.value), this.registers[op2.value], this.ccr);
                 this.registers[op2.value] = res[0];
@@ -1644,12 +1614,12 @@ class Emulator {
         
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1661,7 +1631,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -1672,16 +1642,16 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 res = eorOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
                 this.eori(size, op1, op2);
                 break;
         }
@@ -1692,7 +1662,7 @@ class Emulator {
     // Can't use address registers as destination operands
     eori(size, op1, op2) {
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1704,7 +1674,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1716,7 +1686,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
                 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
 
                 res = eorOP(size, parseInt(op1.value), this.registers[op2.value], this.ccr);
                 this.registers[op2.value] = res[0];
@@ -1729,12 +1699,12 @@ class Emulator {
     neg(size, op) {
 
         switch(op.type) {
-            case Emulator.TOKEN_REG_DATA :
+            case constants.TOKEN_REG_DATA :
                 var res = addOP(this.registers[op.value] * -1, 0x0, this.ccr, size);
                 this.registers[op.value] = res[0];
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET :
+            case constants.TOKEN_OFFSET :
 
                 var address = parseInt(op.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1745,7 +1715,7 @@ class Emulator {
                 this.memory.set(address, res[0], size);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR :
+            case constants.TOKEN_OFFSET_ADDR :
 
                 var address = parseInt(this.registers[op.value], 10) + parseInt(op.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1764,13 +1734,13 @@ class Emulator {
 
     // Extends the sign of a byte to word or of a word to long-word
     ext(size, op) {
-        if(size = Emulator.CODE_BYTE) {
+        if(size = constants.CODE_BYTE) {
             this.errors.push(Strings.EXT_ON_BYTE + Strings.AT_LINE + this.line);
             return;
         }
 
         switch(op.type) {
-            case Emulator.TOKEN_REG_DATA :
+            case constants.TOKEN_REG_DATA :
                 var res = extOP(size, this.registers[op.value], this.ccr);
                 this.registers[op.value] = res[0];
                 this.ccr = res[1];
@@ -1785,7 +1755,7 @@ class Emulator {
     llrShifts(size, op1, op2, right) {
         var res;
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1797,7 +1767,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1813,7 +1783,7 @@ class Emulator {
                 }       
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1825,7 +1795,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1841,7 +1811,7 @@ class Emulator {
                 }
                 break;
                 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
 
                 op1 = parseInt(op1.value);
                 if(op1 > 0x08) {
@@ -1860,7 +1830,7 @@ class Emulator {
                 }
                 break;
             
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1873,7 +1843,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1891,7 +1861,7 @@ class Emulator {
                 break;
 
             
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -1902,7 +1872,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1918,7 +1888,7 @@ class Emulator {
                 }
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 op1 = this.registers[op1.value]
                 var ceiling = getShiftCeiling(size)
@@ -1943,7 +1913,7 @@ class Emulator {
         var res;
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -1955,7 +1925,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1967,7 +1937,7 @@ class Emulator {
 
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -1979,7 +1949,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1991,7 +1961,7 @@ class Emulator {
 
                 break;
                 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
 
                 op1 = parseInt(op1.value);
                 if(op1 > 0x08) {
@@ -2004,7 +1974,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -2016,7 +1986,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2028,7 +1998,7 @@ class Emulator {
                 break;
 
             
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2039,7 +2009,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2049,7 +2019,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 op1 = this.registers[op1.value]
                 var ceiling = getShiftCeiling(size)
@@ -2067,7 +2037,7 @@ class Emulator {
     lrRotations(size, op1, op2, right) {
         var res ;
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -2079,7 +2049,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2089,7 +2059,7 @@ class Emulator {
                 this.ccr = res[1];         
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
 
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -2101,7 +2071,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2111,7 +2081,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
                 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
 
                 op1 = parseInt(op1.value);
                 if(op1 > 0x08) {
@@ -2123,7 +2093,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET.toString():
 
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
@@ -2136,7 +2106,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2148,7 +2118,7 @@ class Emulator {
                 break;
 
             
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2159,7 +2129,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size != constants.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2169,7 +2139,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 op1 = this.registers[op1.value]
                 var ceiling = getShiftCeiling(size)
@@ -2188,15 +2158,15 @@ class Emulator {
         var res;
 
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString():
                 res = cmpOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_DATA.toString():
                 res = cmpOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString():
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2205,7 +2175,7 @@ class Emulator {
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString():
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2214,23 +2184,23 @@ class Emulator {
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
                 this.ccr = res[1]; 
                 break;
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
                 op1 = parseInt(op1.value);
                 res = cmpOP(size, op1, this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
 
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString():
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString():
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_ADDR.toString():
                 this.cmpa(size, op1, op2);
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
                 this.cmpi(size, op1, op2);
                 break;
         }
@@ -2241,15 +2211,15 @@ class Emulator {
         var res;
 
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_ADDR.toString():
                 res = cmpOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString():
                 res = cmpOP(size, this.registers[op1.value], this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_ADDR.toString():
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2258,7 +2228,7 @@ class Emulator {
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_ADDR.toString():
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2267,7 +2237,7 @@ class Emulator {
                 res = cmpOP(size, this.memory.getLong(address), this.registers[op2.value], this.ccr);
                 this.ccr = res[1]; 
                 break;
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_ADDR.toString():
                 op1 = parseInt(op1.value);
                 res = cmpOP(size, op1, this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
@@ -2280,11 +2250,11 @@ class Emulator {
         var res;
 
         switch(op1.type.toString() + op2.type.toString()) {
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString():
                 res = cmpOP(size, parseInt(op1.value), this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET.toString():
                 var address = parseInt(op2.value);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2293,7 +2263,7 @@ class Emulator {
                 res = cmpOP(size, parseInt(op1.value), this.memory.getLong(address), this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_OFFSET_ADDR.toString():
                 var address = parseInt(this.registers[op2.value], 10) + parseInt(op2.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2308,11 +2278,11 @@ class Emulator {
     tst(size, op1) {
         var res;
         switch(op1.type) {
-            case Emulator.TOKEN_REG_DATA:
+            case constants.TOKEN_REG_DATA:
                 res = tstOP(size, this.registers[op1.value], this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET:
+            case constants.TOKEN_OFFSET:
                 var address = parseInt(op1.value);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2321,7 +2291,7 @@ class Emulator {
                 res = tstOP(size, this.memory.getLong(address), this.ccr);
                 this.ccr = res[1];
                 break;
-            case Emulator.TOKEN_OFFSET_ADDR:
+            case constants.TOKEN_OFFSET_ADDR:
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
                     this.errors.push(Strings.INVALID_ADDRESS + Strings.AT_LINE + this.line);
@@ -2354,19 +2324,19 @@ class Emulator {
     }
 
     jsr(op) {
-        this.memory.set(this.registers[7] += 4, this.pc, Emulator.CODE_LONG ); // Saving the current PC in the stack (register 7 is SP = a7) +4 because an address is a long
+        this.memory.set(this.registers[7] += 4, this.pc, constants.CODE_LONG ); // Saving the current PC in the stack (register 7 is SP = a7) +4 because an address is a long
         this.jmp(op); // Performing a jump to subroutine
         return;
     }
 
     rts() {
         this.pc = this.memory.getLong(this.registers[7]); // Retrieving the return address on the top of the stack
-        // this.memory.set(this.registers[7], 0x00000000, Emulator.CODE_LONG); // Clearing the stack of it
+        // this.memory.set(this.registers[7], 0x00000000, constants.CODE_LONG); // Clearing the stack of it
         this.registers[7] -= 4; // Popping the stack
     }
 
     bsr(size, op) {
-        this.memory.set(this.registers[7] += 4, this.pc, Emulator.CODE_LONG ); // Saving the current PC in the stack (register 7 is SP = a7) +4 because an address is a long
+        this.memory.set(this.registers[7] += 4, this.pc, constants.CODE_LONG ); // Saving the current PC in the stack (register 7 is SP = a7) +4 because an address is a long
         this.bra(size, op); // Performing a bra to subroutine
         return;
     }
@@ -2446,20 +2416,20 @@ class Emulator {
             return undefined;
         }
 
-        if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
+        if(size === constants.CODE_LONG || size === constants.CODE_BYTE) {
             // TODO: warning, src and dest will be cast as word (16-bits);
             console.log("warning: src and dest will be cast as word (16-bits)");
         }  
 
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
             
             // Example add.w $5, d0
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString() : 
 
                 var address = parseInt(op1.value);
                 
@@ -2475,7 +2445,7 @@ class Emulator {
                 break;
                        
             // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -2489,7 +2459,7 @@ class Emulator {
                 break;
 
             // Example : add.w d0, d1
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res , src = this.registers[op1.value];
                 res = mulOP(src, this.registers[op2.value], this.ccr, true);
@@ -2497,7 +2467,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
                 var res , src = parseInt(op1.value);
                 res = mulOP(src, this.registers[op2.value], this.ccr, true);
                 this.registers[op2.value] = res[0];
@@ -2515,20 +2485,20 @@ class Emulator {
             return undefined;
         }
 
-        if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
+        if(size === constants.CODE_LONG || size === constants.CODE_BYTE) {
             // TODO: warning, src and dest will be cast as word (16-bits);
             console.log("warning: src and dest will be cast as word (16-bits)");
         }  
 
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
             
             // Example add.w $5, d0
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString() : 
 
                 var address = parseInt(op1.value);
                 
@@ -2544,7 +2514,7 @@ class Emulator {
                 break;
                        
             // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -2558,7 +2528,7 @@ class Emulator {
                 break;
 
             // Example : add.w d0, d1
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res , src = this.registers[op1.value];
                 res = mulOP(src, this.registers[op2.value], this.ccr, false);
@@ -2566,7 +2536,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
                 var res , src = parseInt(op1.value);
                 res = mulOP(src, this.registers[op2.value], this.ccr, false);
                 this.registers[op2.value] = res[0];
@@ -2586,25 +2556,25 @@ class Emulator {
         }
 
         // Checking if dividing by zero
-        if((op1.value & Emulator.WORD_MASK) === 0x0) {
+        if((op1.value & constants.WORD_MASK) === 0x0) {
             this.exception = Strings.DIVISION_BY_ZERO + Strings.AT_LINE + this.line;
             return undefined;
         }
 
-        if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
+        if(size === constants.CODE_LONG || size === constants.CODE_BYTE) {
             // TODO: warning, src and dest will be cast as word (16-bits);
             console.log("warning: src will be cast as word (16-bits)");
         }  
 
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
                 break;
             
             // Example add.w $5, d0
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString() : 
 
                 var address = parseInt(op1.value);
                 
@@ -2620,7 +2590,7 @@ class Emulator {
                 break;
                        
             // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -2634,7 +2604,7 @@ class Emulator {
                 break;
 
             // Example : add.w d0, d1
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res , src = this.registers[op1.value];
                 res = divOP(src, this.registers[op2.value], this.ccr, true);
@@ -2642,7 +2612,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
                 var res , src = parseInt(op1.value);
                 res = divOP(src, this.registers[op2.value], this.ccr, true);
                 this.registers[op2.value] = res[0];
@@ -2661,25 +2631,25 @@ class Emulator {
         }
 
         // Checking if dividing by zero
-        if((op1.value & Emulator.WORD_MASK) === 0x0) {
+        if((op1.value & constants.WORD_MASK) === 0x0) {
             this.exception = Strings.DIVISION_BY_ZERO + Strings.AT_LINE + this.line;
             return undefined;
         }
 
-        if(size === Emulator.CODE_LONG || size === Emulator.CODE_BYTE) {
+        if(size === constants.CODE_LONG || size === constants.CODE_BYTE) {
             this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
             console.log("warning: src will be cast as word (16-bits)");
         }  
 
         switch(op1.type.toString() + op2.type.toString()) {
             
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_OFFSET_ADDR.toString() :
+            case constants.TOKEN_REG_ADDR.toString() + constants.TOKEN_REG_ADDR.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_OFFSET_ADDR.toString() :
                 //TODO: error can't do memory to memory add
                 break;
             
             // Example add.w $5, d0
-            case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_DATA.toString() : 
+            case constants.TOKEN_OFFSET.toString() + constants.TOKEN_REG_DATA.toString() : 
 
                 var address = parseInt(op1.value);
                 
@@ -2695,7 +2665,7 @@ class Emulator {
                 break;
                        
             // Example: add.w (a0), d0 || add.w $10(a0), d0 || TODO: add.w (a0)+, d0
-            case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_OFFSET_ADDR.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var address = parseInt(this.registers[op1.value], 10) + parseInt(op1.offset);
                 if(!this.memory.isValidAddress(address)) {
@@ -2709,7 +2679,7 @@ class Emulator {
                 break;
 
             // Example : add.w d0, d1
-            case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_REG_DATA.toString() + constants.TOKEN_REG_DATA.toString() :
 
                 var res , src = this.registers[op1.value];
                 res = divOP(src, this.registers[op2.value], this.ccr, false);
@@ -2717,7 +2687,7 @@ class Emulator {
                 this.ccr = res[1];
                 break;
             
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString() :
+            case constants.TOKEN_IMMEDIATE.toString() + constants.TOKEN_REG_DATA.toString() :
                 var res , src = parseInt(op1.value);
                 res = divOP(src, this.registers[op2.value], this.ccr, false);
                 this.registers[op2.value] = res[0];
