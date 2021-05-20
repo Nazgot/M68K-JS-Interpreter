@@ -13,12 +13,22 @@ function addOP(src, dest, ccr, size, is_sub) {
     }
 }
 
-function addCCR(positive, negative, fullRes, result, ccr, mask) {
+function addCCR(positive, negative, fullRes, result, ccr, mask, is_sub) {
+    console.log("Before: " + ccr.toString(2));
+    console.log("Positive: " + positive);
+    console.log("Negative: " + negative);
+    console.log("fullres: " + fullRes);
+    console.log("Result: " + result);
+
     // Managing CCR
     // Overflow
-    if(positive && result < 0) ccr = (ccr | 0x02) >>> 0; // Positive + positive can't be negative, if that's the case we had an overflow
-    else if(negative && result > 0) ccr = (ccr | 0x02) >>> 0; // Negative + negative can't be positive, if that's the case we hand an overflow
-    else ccr = (ccr & 0xFD) >>> 0;
+    if(!is_sub) {
+        if(positive && result < 0) ccr = (ccr | 0x02) >>> 0; // Positive + positive can't be negative, if that's the case we had an overflow
+        else if(negative && result > 0) ccr = (ccr | 0x02) >>> 0; // Negative + negative can't be positive, if that's the case we hand an overflow
+        else ccr = (ccr & 0xFD) >>> 0;
+    } else {                                                    // We are inside the SUB operation
+        // TODO: sub ccr
+    }
     // Carry
     if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x01) >>> 0;
     else ccr = (ccr & 0xFE) >>> 0;
@@ -31,6 +41,9 @@ function addCCR(positive, negative, fullRes, result, ccr, mask) {
     // Extended
     if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x10) >>> 0;
     else ccr = (ccr & 0xEF) >>> 0;
+    console.log("After: " + ccr.toString(2));
+
+    console.log('-----------------------------------')
     return ccr;
 }
 
@@ -43,7 +56,7 @@ function addWord(src, dest, ccr, is_sub) {
     let src16 = new Int16Array(1);
     src16[0] = src & Emulator.WORD_MASK;
 
-    var positive = dest16[0] > 0 && src16[0] >= 0;
+    var positive = dest16[0] >= 0 && src16[0] >= 0;
     var negative = dest16[0] < 0 && src16[0] < 0;
 
     aux = (aux & ~Emulator.WORD_MASK) >>> 0; // We save the 16 leftmost bits of the register
@@ -56,7 +69,7 @@ function addWord(src, dest, ccr, is_sub) {
     result[0] = dest & Emulator.WORD_MASK;
 
     // Updating CCR
-    ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.WORD_MASK);
+    ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.WORD_MASK, is_sub);
 
     dest = (dest & Emulator.WORD_MASK) >>> 0  //we trim again to 16 
     aux += dest; // We sum it to aux that contained the 16 leftmost bits of dest (32 bit sum)
@@ -71,7 +84,7 @@ function addByte(src, dest, ccr, is_sub) {
     let src8 = new Int8Array(1);
     src8[0] = src & Emulator.BYTE_MASK;
 
-    var positive = dest8[0] > 0 && src8[0] > 0;
+    var positive = dest8[0] >= 0 && src8[0] >= 0;
     var negative = dest8[0] < 0 && src8[0] < 0;
     aux = (aux & ~Emulator.BYTE_MASK) >>> 0; // We save the 8 leftmost bits of the register
     dest = (dest & Emulator.BYTE_MASK) >>> 0; // We extract the 8 rightmost bits from destination   
@@ -82,7 +95,7 @@ function addByte(src, dest, ccr, is_sub) {
     var result = new Int8Array(1);
     result[0] = dest & Emulator.BYTE_MASK;
     // Updating CCR
-    ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.BYTE_MASK);
+    ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.BYTE_MASK, is_sub);
 
     dest = (dest & Emulator.BYTE_MASK) >>> 0  //we trim again to 8 
     aux += dest; // We sum it to aux that contained the 8 leftmost bits of dest (32 bit sum)
@@ -91,7 +104,7 @@ function addByte(src, dest, ccr, is_sub) {
 
 function addLong(src, dest, ccr, is_sub) {
     
-    var positive = (dest | 0) > 0 && (src | 0) > 0;
+    var positive = (dest | 0) >= 0 && (src | 0) >= 0;
     var negative = (dest | 0) < 0 && (src | 0) < 0;
 
     if(is_sub) dest -= src;
@@ -571,6 +584,9 @@ function bleOP(size, op, pc, ccr) {
     var ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
     var VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
     var NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
+    console.log("Z: " + ZFlag.toString(2));
+    console.log("V: " + VFlag.toString(2));
+    console.log("N: " + NFlag.toString(2));
     if( ZFlag || (!VFlag && NFlag) || (VFlag && !NFlag) )  
         return braOP(size, op, pc);
     else return [pc, false];                               // Else we just return the pc
