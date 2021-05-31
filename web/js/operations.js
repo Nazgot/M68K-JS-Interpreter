@@ -13,22 +13,12 @@ function addOP(src, dest, ccr, size, is_sub) {
     }
 }
 
-function addCCR(positive, negative, fullRes, result, ccr, mask, is_sub) {
-    console.log("Before: " + ccr.toString(2));
-    console.log("Positive: " + positive);
-    console.log("Negative: " + negative);
-    console.log("fullres: " + fullRes);
-    console.log("Result: " + result);
+function subCCR(src, dest, fullRes, result, ccr, mask) {
 
-    // Managing CCR
     // Overflow
-    if(!is_sub) {
-        if(positive && result < 0) ccr = (ccr | 0x02) >>> 0; // Positive + positive can't be negative, if that's the case we had an overflow
-        else if(negative && result > 0) ccr = (ccr | 0x02) >>> 0; // Negative + negative can't be positive, if that's the case we hand an overflow
-        else ccr = (ccr & 0xFD) >>> 0;
-    } else {                                                    // We are inside the SUB operation
-        // TODO: sub ccr
-    }
+    if(dest < 0 && src > 0 && result >= 0) ccr = (ccr | 0x02) >>> 0;
+    else ccr = (ccr & 0xFD) >>> 0;
+
     // Carry
     if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x01) >>> 0;
     else ccr = (ccr & 0xFE) >>> 0;
@@ -41,9 +31,32 @@ function addCCR(positive, negative, fullRes, result, ccr, mask, is_sub) {
     // Extended
     if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x10) >>> 0;
     else ccr = (ccr & 0xEF) >>> 0;
-    console.log("After: " + ccr.toString(2));
+    
+    return ccr;
+}
 
-    console.log('-----------------------------------')
+function addCCR(positive, negative, fullRes, result, ccr, mask) {
+
+    // Managing CCR
+    // Overflow
+    
+    if(positive && result < 0) ccr = (ccr | 0x02) >>> 0; // Positive + positive can't be negative, if that's the case we had an overflow
+    else if(negative && result > 0) ccr = (ccr | 0x02) >>> 0; // Negative + negative can't be positive, if that's the case we hand an overflow
+    else ccr = (ccr & 0xFD) >>> 0;
+    
+    // Carry
+    if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x01) >>> 0;
+    else ccr = (ccr & 0xFE) >>> 0;
+    // Zero
+    if(result == 0) ccr = (ccr | 0x04) >>> 0;
+    else ccr = (ccr & 0xFB) >>> 0;
+    // Negative 
+    if(result < 0) ccr = (ccr | 0x08) >>> 0;
+    else ccr = (ccr & 0xF7) >>> 0;
+    // Extended
+    if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x10) >>> 0;
+    else ccr = (ccr & 0xEF) >>> 0;
+
     return ccr;
 }
 
@@ -69,7 +82,8 @@ function addWord(src, dest, ccr, is_sub) {
     result[0] = dest & Emulator.WORD_MASK;
 
     // Updating CCR
-    ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.WORD_MASK, is_sub);
+    if(is_sub) ccr = subCCR(src16[0], dest16[0], dest, result[0], ccr);
+    else ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.WORD_MASK, is_sub);
 
     dest = (dest & Emulator.WORD_MASK) >>> 0  //we trim again to 16 
     aux += dest; // We sum it to aux that contained the 16 leftmost bits of dest (32 bit sum)
@@ -94,8 +108,10 @@ function addByte(src, dest, ccr, is_sub) {
     // Forcing 8 bit signed type on the 16 rightmost bits of the result (ignoring eventual carries)
     var result = new Int8Array(1);
     result[0] = dest & Emulator.BYTE_MASK;
+
     // Updating CCR
-    ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.BYTE_MASK, is_sub);
+    if(is_sub) ccr = subCCR(src16[0], dest16[0], dest, result[0], ccr);
+    else ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.BYTE_MASK, is_sub);
 
     dest = (dest & Emulator.BYTE_MASK) >>> 0  //we trim again to 8 
     aux += dest; // We sum it to aux that contained the 8 leftmost bits of dest (32 bit sum)
@@ -113,21 +129,27 @@ function addLong(src, dest, ccr, is_sub) {
     var carry = dest > 0xFFFFFFFF;
     dest = dest | 0;
 
-    if(positive && dest < 0) ccr = (ccr | 0x02) >>> 0; // Positive + positive can't be negative, if that's the case we had an overflow
-    else if(negative && dest > 0) ccr = (ccr | 0x02) >>> 0; // Negative + negative can't be positive, if that's the case we hand an overflow
-    else ccr = (ccr & 0xFD) >>> 0;
-    // Carry
-    if(carry) ccr = (ccr | 0x01) >>> 0;
-    else ccr = (ccr & 0xFE) >>> 0;
-    // Zero
-    if(dest == 0) ccr = (ccr | 0x04) >>> 0;
-    else ccr = (ccr & 0xFB) >>> 0;
-    // Negative 
-    if(dest < 0) ccr = (ccr | 0x08) >>> 0;
-    else ccr = (ccr & 0xF7) >>> 0;
-    // Extended
-    if(carry) ccr = (ccr | 0x10) >>> 0;
-    else ccr = (ccr & 0xEF) >>> 0;
+    if(is_sub) {
+        if(src > 0 && dest < 0 && dest > 0) ccr = (ccr | 0x02) >>> 0;
+        else ccr = (ccr & 0xFD) >>> 0;
+    } else {
+        if(positive && dest < 0) ccr = (ccr | 0x02) >>> 0; // Positive + positive can't be negative, if that's the case we had an overflow
+        else if(negative && dest > 0) ccr = (ccr | 0x02) >>> 0; // Negative + negative can't be positive, if that's the case we hand an overflow
+        else ccr = (ccr & 0xFD) >>> 0;
+        // Carry
+        if(carry) ccr = (ccr | 0x01) >>> 0;
+        else ccr = (ccr & 0xFE) >>> 0;
+        // Zero
+        if(dest == 0) ccr = (ccr | 0x04) >>> 0;
+        else ccr = (ccr & 0xFB) >>> 0;
+        // Negative 
+        if(dest < 0) ccr = (ccr | 0x08) >>> 0;
+        else ccr = (ccr & 0xF7) >>> 0;
+        // Extended
+        if(carry) ccr = (ccr | 0x10) >>> 0;
+        else ccr = (ccr & 0xEF) >>> 0;
+    }
+    
 
     return [dest, ccr];
 }
