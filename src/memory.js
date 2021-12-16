@@ -82,10 +82,7 @@ export default class {
     setWord(address, value) {
         address = address | 0;
 
-        this.isValidAddress(address);
         this.setByte(address + 0, value  >>> 8);
-
-        this.isValidAddress(address + 1);
         this.setByte(address + 1, value);
     }
 
@@ -93,23 +90,16 @@ export default class {
     setLong(address, value) {
         address = address | 0;
 
-        this.isValidAddress(address);
         this.setByte(address + 0, value >>> 24);
-
-        this.isValidAddress(address + 1);
         this.setByte(address + 1, value >>> 16); 
-
-        this.isValidAddress(address + 2);
         this.setByte(address + 2, value >>> 8);
-
-        this.isValidAddress(address + 3);
         this.setByte(address + 3, value >>> 0);
     }
 
     // Checks wether an address is in bounds for memory access ( 4GB )
     isValidAddress(address) {
         address = address | 0;
-        if(address <= 0x00000000 || address >= 0x7fffffff) 
+        if(address < 0x00000000 || address > 0x7fffffff) 
             throw new MemoryError("Address out of memory bound", address);
     }
 }
