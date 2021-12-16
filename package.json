@@ -1,0 +1,24 @@
+{
+  "name": "m68k-js-interpreter",
+  "version": "0.0.1",
+  "description": "This is an m68k interpreter written in javascript ",
+  "main": "./src/emulator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nazgot/M68K-JS-Interpreter.git"
+  },
+  "keywords": [
+    "m68k",
+    "interpreter",
+    "emulator"
+  ],
+  "author": "Pietro Ciammaricone",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nazgot/M68K-JS-Interpreter/issues"
+  },
+  "homepage": "https://github.com/Nazgot/M68K-JS-Interpreter#readme"
+}
