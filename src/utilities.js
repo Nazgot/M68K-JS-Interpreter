@@ -1,24 +1,63 @@
-function isBranch(operation) {
-    var options = ["bra", "ble", "bsr", "beq", "bge", "bgt", "ble", "blt", "bne"];
-    return options.some(opt => opt == operation);
+// Checks if a given instruction is a branch instruction
+export function isBranch(instruction) {
+
+    return [
+        "bra",
+        "ble",
+        "bsr",
+        "beq",
+        "bge",
+        "bgt",
+        "ble",
+        "blt",
+        "bne"
+    ].some(
+        opt => opt == instruction
+    );
 }
 
-function isJumpImmediate(operation) {
-    var options = ["jmp", "jsr"];
-    return options.some(opt => opt == operation);
+// Checks if a given instruction is a jump immediate instruction
+export function isJumpImmediate(instruction) {
+
+    return [
+        "jmp",
+        "jsr"
+    ].some(
+        opt => opt == instruction
+    );
 }
 
-function isNoOPsInstruction(operation) {
-    var options = ["rts"];
-    return options.some(opt => opt == operation);
+// Checks if a given instruction is an instruction without operators
+export function isNoOPsInstruction(instruction) {
+    return [
+        "rts"
+    ].some(
+        opt => opt == instruction
+    );
 }
 
-function eraseWord(register) {
+// Given a register it zeroes a word
+export function eraseWord(register) {
     return register & 0xFFFF0000;
 }
 
-function getShiftCeiling(size) {
-    switch(size) {
+// Sleeps for x milliseconds (busy waiting)
+// Is there a better method to achieve this?
+export function sleep(milliseconds) {
+    var start = new Date().getTime();
+    for (var i = 0; i < 1e7; i++) {
+        if ((new Date().getTime() - start) > milliseconds) {
+            break;
+        }
+    }
+}
+
+
+// The following functions might become deprecated after emulator.js update // 
+
+// Given an instruction size returns what is the shift ceiling in bits
+export function getShiftCeiling(size) {
+    switch (size) {
         case Emulator.CODE_BYTE:
             return 0x08;
         case Emulator.CODE_WORD:
@@ -28,8 +67,8 @@ function getShiftCeiling(size) {
     }
 }
 
-function getMSBMask(size) {
-    switch(size) {
+export function getMSBMask(size) {
+    switch (size) {
         case Emulator.CODE_BYTE:
             return Emulator.MSB_BYTE_MASK;
         case Emulator.CODE_WORD:
@@ -39,17 +78,8 @@ function getMSBMask(size) {
     }
 }
 
-function sleep(milliseconds) {
-    var start = new Date().getTime();
-    for (var i = 0; i < 1e7; i++) {
-      if ((new Date().getTime() - start) > milliseconds){
-        break;
-      }
-    }
-}
-
-function type_to_size(type) {
-    switch(type) {
+export function type_to_size(type) {
+    switch (type) {
         case Emulator.CODE_BYTE:
             return Emulator.SIZE_BYTE;
         case Emulator.CODE_WORD:

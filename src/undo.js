@@ -1,16 +1,22 @@
-class Undo {
+'use strict'
+
+// Undo is a stack that keeps track of the program execution
+// And allow us to go back in time during step by step execution
+export default class {
 
     constructor() {
         this.stack = [];
     }
     
+    // Returns the whole stack
     getStack() {
         return this.stack;
     }
 
-    // Create and returns a stack frame
+    // Creates and returns a new stack frame
     makeFrame(pc, ccr, registers, memory, errors, lastInstruction, line) {
-        let frame = {
+
+        return {
             pc: pc,
             ccr: ccr,
             lastInstruction: lastInstruction,
@@ -19,29 +25,31 @@ class Undo {
             memory: {... memory},
             errors: [... errors]
         }
-        return frame;
+
     }
 
+    // Pushes a new frame into the stack
     push(pc, ccr, registers, memory, errors, lastInstruction, line) {
         this.stack.push(this.makeFrame(pc, ccr, registers, memory, errors, lastInstruction, line));
     }
 
+    // Pops the top frame on the stack
+    // Returns undefined if the stack is empty
     pop() {
-        if(this.stack.length == 0)
-            return undefined;
-        return this.stack.pop();
+        return this.stack.isEmpty() ? undefined : this.stack.pop();
     }
 
+    // Look at the top frame in the stack without returning it
     peek() {
         return this.stack[this.stack.length - 1]; 
     }
 
+    // Checks if the current stack is empty
     isEmpty() {
-        if(this.stack.length == 0)
-            return true;
-        return false;
+        return !this.stack.length;
     }
 
+    // Resets the stack
     clearStack() {
         this.stack = [];
     }
