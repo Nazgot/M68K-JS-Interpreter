@@ -1,3 +1,5 @@
+'use strict'
+
 // Exceptions
 export const INVALID_PC_EXCEPTION = "Execution killed: Invalid program counter.";
 export const DIVISION_BY_ZERO = "Execution killed: attempted a divide by zero operation.";

@@ -79,7 +79,7 @@ export default class {
         this.memory[address] = value;
     }
   
-    // Performs setByte on the most significant on the provided memory address
+    // Performs setByte on the most significant byte on the provided memory address
     // Then performs setByte on the least significant byte storing it in the next memory address
     setWord(address, value) {
         address = address | 0;
@@ -98,7 +98,7 @@ export default class {
         this.setByte(address + 3, value >>> 0);
     }
 
-    // Checks wether an address is in bounds for memory access ( 4GB )
+    // Checks wether an address is in bounds for memory access
     isValidAddress(address) {
         address = address | 0;
         if(address < 0x00000000 || address > 0x7fffffff) 

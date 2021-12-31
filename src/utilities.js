@@ -1,3 +1,5 @@
+'use strict'
+
 // Checks if a given instruction is a branch instruction
 export function isBranch(instruction) {
 

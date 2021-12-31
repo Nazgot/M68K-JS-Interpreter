@@ -1,7 +1,9 @@
 # M68K-JS-Interpreter
 
+## !! This branch is dedicated to the migration to ES6 and code optimization !! 
+
 A simple javascript interpreter for the M68000 assembly<br/>
-STEP, RUN, RESET are finally implemented and working (probably).
+
 
 
 ## Currently implemented instructions

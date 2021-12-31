@@ -1,6 +1,6 @@
+'use strict'
 
-
-function addOP(src, dest, ccr, size, is_sub) {
+export function addOP(src, dest, ccr, size, is_sub) {
     switch(size) {
         case Emulator.CODE_LONG: 
             return addLong(src,dest,ccr,is_sub);
@@ -16,7 +16,7 @@ function addOP(src, dest, ccr, size, is_sub) {
 function subCCR(src, dest, fullRes, result, ccr, mask) {
 
     // Overflow
-    if(dest < 0 && src > 0 && result >= 0) ccr = (ccr | 0x02) >>> 0;
+    if(dest < 0 && src > 0 && result >= 0) ccr = (ccr | 0x02) >>> 0; 
     else ccr = (ccr & 0xFD) >>> 0;
 
     // Carry
@@ -69,8 +69,8 @@ function addWord(src, dest, ccr, is_sub) {
     let src16 = new Int16Array(1);
     src16[0] = src & Emulator.WORD_MASK;
 
-    var positive = dest16[0] >= 0 && src16[0] >= 0;
-    var negative = dest16[0] < 0 && src16[0] < 0;
+    let positive = dest16[0] >= 0 && src16[0] >= 0;
+    let negative = dest16[0] < 0 && src16[0] < 0;
 
     aux = (aux & ~Emulator.WORD_MASK) >>> 0; // We save the 16 leftmost bits of the register
     dest = (dest & Emulator.WORD_MASK) >>> 0; // We extract the 16 rightmost bits from destination 
@@ -78,7 +78,7 @@ function addWord(src, dest, ccr, is_sub) {
     else dest += ((src & Emulator.WORD_MASK) >>> 0); // We extract the 16 rightmost bits from src and sum it with dest
 
     // Forcing 16 bit signed type on the 16 rightmost bits of the result (ignoring eventual carries)
-    var result = new Int16Array(1);
+    let result = new Int16Array(1);
     result[0] = dest & Emulator.WORD_MASK;
 
     // Updating CCR
@@ -98,15 +98,15 @@ function addByte(src, dest, ccr, is_sub) {
     let src8 = new Int8Array(1);
     src8[0] = src & Emulator.BYTE_MASK;
 
-    var positive = dest8[0] >= 0 && src8[0] >= 0;
-    var negative = dest8[0] < 0 && src8[0] < 0;
+    let positive = dest8[0] >= 0 && src8[0] >= 0;
+    let negative = dest8[0] < 0 && src8[0] < 0;
     aux = (aux & ~Emulator.BYTE_MASK) >>> 0; // We save the 8 leftmost bits of the register
     dest = (dest & Emulator.BYTE_MASK) >>> 0; // We extract the 8 rightmost bits from destination   
     if(is_sub) dest -= ((src & Emulator.BYTE_MASK) >>> 0);
     else dest += ((src & Emulator.BYTE_MASK) >>> 0); // We extract the 8 rightmost bits from src and sum it with dest
 
     // Forcing 8 bit signed type on the 16 rightmost bits of the result (ignoring eventual carries)
-    var result = new Int8Array(1);
+    let result = new Int8Array(1);
     result[0] = dest & Emulator.BYTE_MASK;
 
     // Updating CCR
@@ -120,13 +120,13 @@ function addByte(src, dest, ccr, is_sub) {
 
 function addLong(src, dest, ccr, is_sub) {
     
-    var positive = (dest | 0) >= 0 && (src | 0) >= 0;
-    var negative = (dest | 0) < 0 && (src | 0) < 0;
+    let positive = (dest | 0) >= 0 && (src | 0) >= 0;
+    let negative = (dest | 0) < 0 && (src | 0) < 0;
 
     if(is_sub) dest -= src;
     else dest += src;
 
-    var carry = dest > 0xFFFFFFFF;
+    let carry = dest > 0xFFFFFFFF;
     dest = dest | 0;
 
     if(is_sub) {
@@ -154,19 +154,19 @@ function addLong(src, dest, ccr, is_sub) {
     return [dest, ccr];
 }
 
-function moveOP(src, dest, ccr, size) {
-    var aux;
+export function moveOP(src, dest, ccr, size) {
+    let aux;
     switch(size) {
         case Emulator.CODE_LONG :
             return [src, moveCCR(src | 0, ccr, Emulator.LONG_MASK)];
         case Emulator.CODE_WORD :
             aux = addOP(src, dest & ~Emulator.WORD_MASK, ccr, size)[0]; // New register value
-            var aux16 = new Int16Array(1);  
+            let aux16 = new Int16Array(1);  
             aux16[0] = aux & Emulator.WORD_MASK;    // Forcing the result to 16 bit signed for CCR
             return [aux, moveCCR(aux16[0], ccr, Emulator.WORD_MASK)];
         case Emulator.CODE_BYTE :
             aux = addOP(src, dest & ~Emulator.BYTE_MASK, ccr, size)[0]; // New register value
-            var aux8 = new Int8Array(1);
+            let aux8 = new Int8Array(1);
             aux8[0] = aux & Emulator.BYTE_MASK;     // Forcing the result to 8 bit signed for CCR
             return [aux, moveCCR(aux8[0], ccr, Emulator.BYTE_MASK)];
         default :
@@ -187,18 +187,18 @@ function moveCCR(res, ccr) {
     return ccr;
 }
 
-function swapOP(op, ccr) {
-    var tmp = op << 16; // Moving first 16 bits to the most significative positions
+export function swapOP(op, ccr) {
+    let tmp = op << 16; // Moving first 16 bits to the most significative positions
     op = op >> 16; // Moving last 16 bits of the register to the least significative positions
     tmp += op; // Combining register
     return [tmp, moveCCR(tmp | 0, ccr)]; // Returning swapped register and CCR (same behaviour as move)
 }
 
-function exgOP(op1, op2) {
+export function exgOP(op1, op2) {
     return [op2, op1];
 }
 
-function clrOP(size, op, ccr) {
+export function clrOP(size, op, ccr) {
     ccr = (ccr & 0x10) >>> 0; // Resetting every bit but the Extended bit
     ccr = (ccr | 0x04) >>> 0; // Setting 0 bit to 1
     switch(size) {
@@ -211,17 +211,17 @@ function clrOP(size, op, ccr) {
     }
 }
 
-function notOP(size, op, ccr) {
-    var res;
+export function notOP(size, op, ccr) {
+    let res;
     switch(size) {
         case Emulator.CODE_BYTE:
             res = ((op & ~Emulator.BYTE_MASK) + (~op & Emulator.BYTE_MASK)) >>> 0
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = res & Emulator.BYTE_MASK;     // Forcing the result to 8 bit signed for CCR
             return [res, moveCCR(res8[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_WORD:
             res = ((op & ~Emulator.WORD_MASK) + (~op & Emulator.WORD_MASK)) >>> 0
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = res & Emulator.WORD_MASK;     // Forcing the result to 16 bit signed for CCR
             return [res, moveCCR(res16[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_LONG:
@@ -230,16 +230,16 @@ function notOP(size, op, ccr) {
     }
 }
 
-function andOP(size, op1, op2, ccr) {
+export function andOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
             res = ((op2 & ~Emulator.BYTE_MASK) + ((op1 & Emulator.BYTE_MASK) & (op2 & Emulator.BYTE_MASK))) >>> 0;
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = res & Emulator.BYTE_MASK;     // Forcing the result to 8 bit signed for CCR
             return [res, moveCCR(res8[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_WORD:
             res = ((op2 & ~Emulator.WORD_MASK) + ((op1 & Emulator.WORD_MASK) & (op2 & Emulator.WORD_MASK))) >>> 0;
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = res & Emulator.WORD_MASK;     // Forcing the result to 16 bit signed for CCR
             return [res, moveCCR(res16[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_LONG:
@@ -248,16 +248,16 @@ function andOP(size, op1, op2, ccr) {
     }
 }
 
-function orOP(size, op1, op2, ccr) {
+export function orOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
             res = ((op2 & ~Emulator.BYTE_MASK) + ((op1 & Emulator.BYTE_MASK) | (op2 & Emulator.BYTE_MASK))) >>> 0;
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = res & Emulator.BYTE_MASK;     // Forcing the result to 8 bit signed for CCR
             return [res, moveCCR(res8[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_WORD:
             res = ((op2 & ~Emulator.WORD_MASK) + ((op1 & Emulator.WORD_MASK) | (op2 & Emulator.WORD_MASK))) >>> 0;
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = res & Emulator.WORD_MASK;     // Forcing the result to 16 bit signed for CCR
             return [res, moveCCR(res16[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_LONG:
@@ -266,16 +266,16 @@ function orOP(size, op1, op2, ccr) {
     }
 }
 
-function eorOP(size, op1, op2, ccr) {
+export function eorOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
             res = ((op2 & ~Emulator.BYTE_MASK) + ((op1 & Emulator.BYTE_MASK) ^ (op2 & Emulator.BYTE_MASK))) >>> 0;
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = res & Emulator.BYTE_MASK;     // Forcing the result to 8 bit signed for CCR
             return [res, moveCCR(res8[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_WORD:
             res = ((op2 & ~Emulator.WORD_MASK) + ((op1 & Emulator.WORD_MASK) ^ (op2 & Emulator.WORD_MASK))) >>> 0;
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = res & Emulator.WORD_MASK;     // Forcing the result to 16 bit signed for CCR
             return [res, moveCCR(res16[0], ccr)];    // Same ccr behaviour as move
         case Emulator.CODE_LONG:
@@ -284,17 +284,17 @@ function eorOP(size, op1, op2, ccr) {
     }
 }
 
-function negOP(size, op) {
+export function negOP(size, op) {
     switch(size) {
         case Emulator.CODE_BYTE:
             if(op == 0 || op == 128)
                 return op;
-            var aux = op & ~Emulator.BYTE_MASK >>> 0;
+            let aux = op & ~Emulator.BYTE_MASK >>> 0;
             return aux + (((op * -1) >>> 0) & Emulator.BYTE_MASK);
         case Emulator.CODE_WORD:
             if(op == 0 || op == 32768)
                 return op;
-            var aux = op & ~Emulator.WORD_MASK >>> 0;
+            let aux = op & ~Emulator.WORD_MASK >>> 0;
             return aux + (((op * -1) >>> 0) & Emulator.WORD_MASK);
         case Emulator.CODE_LONG:
             if(op == 0 || op == 2147483648)
@@ -303,11 +303,11 @@ function negOP(size, op) {
     }
 }
 
-function extOP(size, op, ccr) {
+export function extOP(size, op, ccr) {
     switch(size) {
         case Emulator.CODE_WORD:
-            var tmp = op & ~Emulator.WORD_MASK;
-            var value = op & Emulator.BYTE_MASK;
+            let tmp = op & ~Emulator.WORD_MASK;
+            let value = op & Emulator.BYTE_MASK;
             if(value < 0x00000080) {
                 tmp += (value >>> 0);
             }
@@ -315,11 +315,11 @@ function extOP(size, op, ccr) {
                 tmp = tmp | 0x0000FF00;
                 tmp += (value >>> 0);
             }
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = tmp & Emulator.WORD_MASK;   // Forcing the result to 16 bit signed for CCR
             return [tmp, moveCCR(res16[0], ccr)];
         case Emulator.CODE_LONG:
-            var value = op & Emulator.WORD_MASK;
+            let value = op & Emulator.WORD_MASK;
             if(value < 0x00008000) 
                value = 0x00000000 + value;
             else 
@@ -334,10 +334,10 @@ function shiftCCR(op1, op2, result, ccr, right) {
     }
     else {
         if(right) {
-            var ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
+            let ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
             ext = ext & 0x00000001;
         } else {
-            var ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
+            let ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
             ext = ext & 0x80000000;
         }
         if(ext != 0x0) ccr = (ccr | 0x11) >>> 0; // Flagging extended and carry
@@ -354,46 +354,46 @@ function shiftCCR(op1, op2, result, ccr, right) {
     return ccr;
 }
 
-function lslOP(size, op1, op2, ccr) {
+export function lslOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
-            var aux = op2 & ~Emulator.BYTE_MASK;
+            let aux = op2 & ~Emulator.BYTE_MASK;
             op2 = op2 << op1;
             aux = aux + ((op2 & Emulator.BYTE_MASK) >>> 0);
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = aux & Emulator.BYTE_MASK;
             return [aux, shiftCCR(op1, op2, res8[0], ccr, false)];
         case Emulator.CODE_WORD:
-            var aux = op2 & ~Emulator.WORD_MASK;
+            let aux = op2 & ~Emulator.WORD_MASK;
             op2 = op2 << op1;
             aux = aux + ((op2 & Emulator.WORD_MASK) >>> 0);
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = aux & Emulator.WORD_MASK;
             return [aux, shiftCCR(op1, op2, res16[0], ccr, false)];
         case Emulator.CODE_LONG:
-            var aux = op2 << op1;
+            let aux = op2 << op1;
             return [aux, shiftCCR(op1, op2, aux | 0, ccr, false)];
     }
 }
 
-function lsrOP(size, op1, op2, ccr) {
+export function lsrOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
-            var aux = op2 & ~Emulator.BYTE_MASK;
+            let aux = op2 & ~Emulator.BYTE_MASK;
             op2 = op2 >>> op1;
             aux = aux + ((op2 & Emulator.BYTE_MASK) >>> 0);
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = aux & Emulator.BYTE_MASK;
             return [aux, shiftCCR(op1, op2, res8[0], ccr, true)];
         case Emulator.CODE_WORD:
-            var aux = op2 & ~Emulator.WORD_MASK;
+            let aux = op2 & ~Emulator.WORD_MASK;
             op2 = op2 >>> op1;
             aux = aux + ((op2 & Emulator.WORD_MASK) >>> 0);
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = aux & Emulator.WORD_MASK;
             return [aux, shiftCCR(op1, op2, res16[0], ccr, true)];
         case Emulator.CODE_LONG:
-            var aux = op2 >>> op1;
+            let aux = op2 >>> op1;
             return [aux, shiftCCR(op1, op2, aux | 0, ccr, true)];
     }
 }
@@ -405,10 +405,10 @@ function ashiftCCR(op1, op2, result, ccr, size, right) {
     }
     else {
         if(right) {
-            var ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
+            let ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
             ext = ext & 0x00000001;
         } else {
-            var ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
+            let ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
             ext = ext & 0x80000000;
         }
         if(ext != 0x0) ccr = (ccr | 0x11) >>> 0; // Flagging extended and carry
@@ -421,7 +421,7 @@ function ashiftCCR(op1, op2, result, ccr, size, right) {
     if(result < 0) ccr = (ccr | 0x08) >>> 0;        // Flagging negative
     else ccr = (ccr & 0x17) >>> 0;                  // Clrearing Negative
 
-    var mask = getMSBMask(size);
+    let mask = getMSBMask(size);
 
     if(op2 && mask != result && mask) ccr = ccr | 0x02;   // If the MSB has changed at any time during th operation we flag Overflow
     else ccr = (ccr & 0x1D) >>> 0;                  // Clearing overflow
@@ -429,46 +429,46 @@ function ashiftCCR(op1, op2, result, ccr, size, right) {
     return ccr;
 }
 
-function aslOP(size, op1, op2, ccr) {
+export function aslOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
-            var aux = op2 & ~Emulator.BYTE_MASK;
+            let aux = op2 & ~Emulator.BYTE_MASK;
             op2 = op2 << op1;
             aux += ((op2 & Emulator.BYTE_MASK) >>> 0);
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = aux & Emulator.BYTE_MASK;
             return [aux, ashiftCCR(op1, op2, aux | 0, ccr, false)];
         case Emulator.CODE_WORD:
-            var aux = op2 & ~Emulator.WORD_MASK;
+            let aux = op2 & ~Emulator.WORD_MASK;
             op2 = op2 << op1;
             aux += ((op2 & Emulator.WORD_MASK) >>> 0);
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = aux & Emulator.WORD_MASK;
             return [aux, ashiftCCR(op1, op2, res16[0], ccr, false)];
         case Emulator.CODE_LONG:
-            var aux = op2 << op1;
+            let aux = op2 << op1;
             return [aux, ashiftCCR(op1, op2, aux | 0, ccr, false)];
     }
 }
 
-function asrOP(size, op1, op2, ccr) {
+export function asrOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
-            var aux = op2 & ~Emulator.BYTE_MASK;
+            let aux = op2 & ~Emulator.BYTE_MASK;
             op2 = op2 >> op1;
             aux = aux + ((op2 & Emulator.BYTE_MASK) >>> 0);
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = aux & Emulator.BYTE_MASK;
             return [aux, ashiftCCR(op1, op2, aux | 0, ccr, false)]; 
         case Emulator.CODE_WORD:
-            var aux = op2 & ~Emulator.WORD_MASK;
+            let aux = op2 & ~Emulator.WORD_MASK;
             op2 = op2 >> op1;
             aux = aux + ((op2 & Emulator.WORD_MASK) >>> 0);
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = aux & Emulator.WORD_MASK;
             return [aux, ashiftCCR(op1, op2, res16[0], ccr, true)];
         case Emulator.CODE_LONG:
-            var aux = op2 >> op1;
+            let aux = op2 >> op1;
             return [aux, ashiftCCR(op1, op2, aux | 0, ccr, true)];
     }
 }
@@ -479,10 +479,10 @@ function roCCR(op1, op2, result, ccr, right) {
     }
     else {
         if(right) {
-            var ext = op2 >>> (op1 - 1); // Rightmost bit will be the carry flag
+            let ext = op2 >>> (op1 - 1); // Rightmost bit will be the carry flag
             ext = ext & 0x00000001;
         } else {
-            var ext = op2 << (op1 - 1); // Leftmost bit will be the carry flag
+            let ext = op2 << (op1 - 1); // Leftmost bit will be the carry flag
             ext = ext & 0x80000000;
         }
         if(ext != 0x0) ccr = (ccr | 0x01) >>> 0; // Flagging carry
@@ -499,66 +499,66 @@ function roCCR(op1, op2, result, ccr, right) {
     return ccr;
 }
 
-function rolOP(size, op1, op2, ccr) {
+export function rolOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
-            var aux = op2 & ~Emulator.BYTE_MASK;
+            let aux = op2 & ~Emulator.BYTE_MASK;
             op2 = op2 & Emulator.BYTE_MASK;
             aux = aux + (((op2 << op1) | (op2 >>> (Emulator.SIZE_BYTE - op1))) & Emulator.BYTE_MASK);
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = aux & Emulator.BYTE_MASK;
             return [aux, roCCR(op1, op2, res8[0], ccr, false)];
         case Emulator.CODE_WORD:
-            var aux = op & ~Emulator.WORD_MASK;
+            let aux = op & ~Emulator.WORD_MASK;
             op2 = op2 & Emulator.WORD_MASK;
             aux = aux + (((op2 << op1) | (op2 >>> (Emulator.SIZE_WORD - op1))) & Emulator.WORD_MASK);
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = aux & Emulator.WORD_MASK;
             return [aux, roCCR(op1, op2, res16[0], ccr, false)];
         case Emulator.CODE_LONG:
-            var aux = (op2 << op1) | (op2 >> (Emulator.SIZE_LONG - op1));
+            let aux = (op2 << op1) | (op2 >> (Emulator.SIZE_LONG - op1));
             return [aux, roCCR(op1, op2, aux | 0, ccr, false)];
     }
 }
 
-function rorOP(size, op1, op2, ccr) {
+export function rorOP(size, op1, op2, ccr) {
     switch(size) {
         case Emulator.CODE_BYTE:
-            var aux = op2 & ~Emulator.BYTE_MASK;
+            let aux = op2 & ~Emulator.BYTE_MASK;
             op2 = op2 & Emulator.BYTE_MASK;
             aux = aux + (((op2 >>> op1) | (op2 << (Emulator.SIZE_BYTE - op1))) & Emulator.BYTE_MASK);
-            var res8 = new Int8Array(1);
+            let res8 = new Int8Array(1);
             res8[0] = aux & Emulator.BYTE_MASK;
             return [aux, roCCR(op1, op2, res8[0], ccr, true)];
         case Emulator.CODE_WORD:
-            var aux = op2 & ~Emulator.WORD_MASK;
+            let aux = op2 & ~Emulator.WORD_MASK;
             op2 = op2 & Emulator.WORD_MASK;
             aux = aux + (((op2 >>> op1) | (op2 << (Emulator.SIZE_WORD - op1))) & Emulator.WORD_MASK);
-            var res16 = new Int16Array(1);
+            let res16 = new Int16Array(1);
             res16[0] = aux & Emulator.WORD_MASK;
             return [aux, roCCR(op1, op2, res16[0], ccr, true)];
         case Emulator.CODE_LONG:
-            var aux = (op2 >>> op1) | (op2 << (Emulator.SIZE_LONG - op1));
+            let aux = (op2 >>> op1) | (op2 << (Emulator.SIZE_LONG - op1));
             return [aux, roCCR(op1, op2, aux | 0, ccr, true)];
     }
 }
 
-function cmpOP(size, op1, op2, ccr) {
-    var res = addOP(op1, op2, ccr, size, true);
+export function cmpOP(size, op1, op2, ccr) {
+    let res = addOP(op1, op2, ccr, size, true);
     // We use the add ccr to compute CMP ccr, we then set the extended bit to the previous value in case it was modified by add
     if((ccr & 0xF0) == 0x0) res[1] = res[1] & 0x0F;
     else res[1] = res[1] | 0x10;
     return res;
 }
 
-function tstOP(size, op1, ccr) {
-    var res = cmpOP(size, 0x00000000, op1, ccr);
+export function tstOP(size, op1, ccr) {
+    let res = cmpOP(size, 0x00000000, op1, ccr);
     // Overflow and carry set to 0
     res[1] = res[1] & 0xFC;
     return res;
 }
 
-function braOP(size, op, pc) {
+export function braOP(size, op, pc) {
     switch(size) {
         case Emulator.CODE_BYTE:
             if(op >= 0) 
@@ -571,41 +571,41 @@ function braOP(size, op, pc) {
     }
 }
 
-function beqOP(size, op, pc, ccr) {
-    var ZFlag = ccr & 0x04; // Extracting the Z flag from ccr
+export function beqOP(size, op, pc, ccr) {
+    let ZFlag = ccr & 0x04; // Extracting the Z flag from ccr
     if(!ZFlag)              // If the flag is false we branch
         return braOP(size, op, pc);
     else return [pc, false]; // Else we just return the pc
 }
 
-function bneOP(size, op, pc, ccr) {
-    var ZFlag = ccr & 0x04; // Extracting the Z flag from ccr
+export function bneOP(size, op, pc, ccr) {
+    let ZFlag = ccr & 0x04; // Extracting the Z flag from ccr
     if(ZFlag)              // If the flag is true we branch
         return braOP(size, op, pc);
     else return [pc, false]; // Else we just return the pc
 }
 
-function bgeOP(size, op, pc, ccr) {
-    var VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
-    var NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
+export function bgeOP(size, op, pc, ccr) {
+    let VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
+    let NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
     if( (VFlag && NFlag) || (!VFlag && !NFlag) )          // If both the flags are set, or if both the flags are clear, we branch
         return braOP(size, op, pc);
     else return [pc, false];                               // Else we just return the pc
 }
 
-function bgtOP(size, op, pc, ccr) {
-    var ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
-    var VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
-    var NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
+export function bgtOP(size, op, pc, ccr) {
+    let ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
+    let VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
+    let NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
     if( !ZFlag && ((VFlag && NFlag) || (!VFlag && !NFlag)) )          // If Z flag is clear and both the flags are set, or if both the flags are clear, we branch
         return braOP(size, op, pc);
     else return [pc, false];                               // Else we just return the pc
 }
 
-function bleOP(size, op, pc, ccr) {
-    var ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
-    var VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
-    var NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
+export function bleOP(size, op, pc, ccr) {
+    let ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
+    let VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
+    let NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
     console.log("Z: " + ZFlag.toString(2));
     console.log("V: " + VFlag.toString(2));
     console.log("N: " + NFlag.toString(2));
@@ -614,18 +614,18 @@ function bleOP(size, op, pc, ccr) {
     else return [pc, false];                               // Else we just return the pc
 }
 
-function bltOP(size, op, pc, ccr) {
-    var VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
-    var NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
+export function bltOP(size, op, pc, ccr) {
+    let VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
+    let NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
     if( (!VFlag && NFlag) || (VFlag && !NFlag) )  
         return braOP(size, op, pc);
     else return [pc, false];                               // Else we just return the pc
 }
 
-function mulOP(op1, op2, ccr, is_unsigned) {
+export function mulOP(op1, op2, ccr, is_unsigned) {
 
-    var ops;
-    var res;
+    let ops;
+    let res;
 
     if(is_unsigned) {
         ops = new Uint16Array([op1, op2]);
@@ -655,11 +655,11 @@ function mulOP(op1, op2, ccr, is_unsigned) {
     return [res, ccr];
 }
 
-function divOP(op1, op2, ccr, is_unsigned) {
+export function divOP(op1, op2, ccr, is_unsigned) {
 
-    var ops;
-    var quotient;
-    var remainder;
+    let ops;
+    let quotient;
+    let remainder;
 
     // Checking if the operation will overflow
     if((op2 & !Emulator.WORD_MASK) >= (op1 & Emulator.WORD_MASK)) {
@@ -706,7 +706,7 @@ function divOP(op1, op2, ccr, is_unsigned) {
     remainder = remainder << 16;
 
     // Sum of remainder and quotient should be 0xABCD1234 where ABCD is remainder and 1234 is quotient
-    var result = remainder + (quotient & Emulator.WORD_MASK);
+    let result = remainder + (quotient & Emulator.WORD_MASK);
 
     return [result, ccr];
 }
