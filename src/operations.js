@@ -1,5 +1,11 @@
 'use strict'
+import { getMSBMask } from "./utilities";
 //TODO maybe convert those if else to ternaries?
+//TODO split each type of operation into it's own file
+//example splitting logical and arithmetic operations, could also make it as an object like:
+//MathOps.add, LogicOp.and, etc
+
+import Emulator from "./emulator";
 
 export function addOP(src, dest, ccr, size, is_sub) {
     switch(size) {
@@ -21,7 +27,7 @@ function subCCR(src, dest, fullRes, result, ccr, mask) {
     else ccr = (ccr & 0xFD) >>> 0;
 
     // Carry
-    if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x01) >>> 0;
+    if(((fullRes & ~mask) >>> 0) !== 0) ccr = (ccr | 0x01) >>> 0;
     else ccr = (ccr & 0xFE) >>> 0;
     // Zero
     if(result === 0) ccr = (ccr | 0x04) >>> 0;
@@ -30,7 +36,7 @@ function subCCR(src, dest, fullRes, result, ccr, mask) {
     if(result < 0) ccr = (ccr | 0x08) >>> 0;
     else ccr = (ccr & 0xF7) >>> 0;
     // Extended
-    if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x10) >>> 0;
+    if(((fullRes & ~mask) >>> 0) !== 0) ccr = (ccr | 0x10) >>> 0;
     else ccr = (ccr & 0xEF) >>> 0;
     
     return ccr;
@@ -46,7 +52,7 @@ function addCCR(positive, negative, fullRes, result, ccr, mask) {
     else ccr = (ccr & 0xFD) >>> 0;
     
     // Carry
-    if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x01) >>> 0;
+    if(((fullRes & ~mask) >>> 0) !== 0) ccr = (ccr | 0x01) >>> 0;
     else ccr = (ccr & 0xFE) >>> 0;
     // Zero
     if(result === 0) ccr = (ccr | 0x04) >>> 0;
@@ -55,13 +61,13 @@ function addCCR(positive, negative, fullRes, result, ccr, mask) {
     if(result < 0) ccr = (ccr | 0x08) >>> 0;
     else ccr = (ccr & 0xF7) >>> 0;
     // Extended
-    if(((fullRes & ~mask) >>> 0) != 0) ccr = (ccr | 0x10) >>> 0;
+    if(((fullRes & ~mask) >>> 0) !== 0) ccr = (ccr | 0x10) >>> 0;
     else ccr = (ccr & 0xEF) >>> 0;
 
     return ccr;
 }
 
-function addWord(src, dest, ccr, is_sub) {
+export function addWord(src, dest, ccr, is_sub) {
     let aux = dest;
 
     // need signed 16 bits dest and src for positive and negative testing
@@ -111,7 +117,7 @@ function addByte(src, dest, ccr, is_sub) {
     result[0] = dest & Emulator.BYTE_MASK;
 
     // Updating CCR
-    if(is_sub) ccr = subCCR(src16[0], dest16[0], dest, result[0], ccr);
+    if(is_sub) ccr = subCCR(src16[0], dest16[0], dest, result[0], ccr); //TODO src16 and dest16 aren't defined
     else ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.BYTE_MASK, is_sub);
 
     dest = (dest & Emulator.BYTE_MASK) >>> 0  //we trim again to 8 
@@ -156,20 +162,21 @@ function addLong(src, dest, ccr, is_sub) {
 }
 
 export function moveOP(src, dest, ccr, size) {
-    let aux;
     switch(size) {
         case Emulator.CODE_LONG :
             return [src, moveCCR(src | 0, ccr, Emulator.LONG_MASK)];
-        case Emulator.CODE_WORD :
-            aux = addOP(src, dest & ~Emulator.WORD_MASK, ccr, size)[0]; // New register value
+        case Emulator.CODE_WORD :{
+            let aux = addOP(src, dest & ~Emulator.WORD_MASK, ccr, size)[0]; // New register value
             let aux16 = new Int16Array(1);  
             aux16[0] = aux & Emulator.WORD_MASK;    // Forcing the result to 16 bit signed for CCR
             return [aux, moveCCR(aux16[0], ccr, Emulator.WORD_MASK)];
-        case Emulator.CODE_BYTE :
-            aux = addOP(src, dest & ~Emulator.BYTE_MASK, ccr, size)[0]; // New register value
+        }
+        case Emulator.CODE_BYTE :{
+            let aux = addOP(src, dest & ~Emulator.BYTE_MASK, ccr, size)[0]; // New register value
             let aux8 = new Int8Array(1);
             aux8[0] = aux & Emulator.BYTE_MASK;     // Forcing the result to 8 bit signed for CCR
             return [aux, moveCCR(aux8[0], ccr, Emulator.BYTE_MASK)];
+        }
         default :
             return undefined;
     }
@@ -345,18 +352,19 @@ export function extOP(size, op, ccr) {
 }
 
 function shiftCCR(op1, op2, result, ccr, right) {
-    if(op1 = 0x0) {
+    if(op1 === 0x0) {
         ccr = (ccr & 0x1E) >>> 0; // Clearing carry, not clearing extended
     }
     else {
+        let ext
         if(right) {
-            let ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
+            ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
             ext = ext & 0x00000001;
         } else {
-            let ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
+            ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
             ext = ext & 0x80000000;
         }
-        if(ext != 0x0) ccr = (ccr | 0x11) >>> 0; // Flagging extended and carry
+        if(ext !== 0x0) ccr = (ccr | 0x11) >>> 0; // Flagging extended and carry
         else ccr = (ccr & 0x0E) >>> 0 // Clearing extended and carry
     }
     
@@ -422,17 +430,18 @@ export function lsrOP(size, op1, op2, ccr) {
 
 function ashiftCCR(op1, op2, result, ccr, size, right) {
     
-    if(op1 = 0x0) {
+    if(op1 === 0x0) {
         ccr = (ccr & 0x1E) >>> 0; // Clearing carry, not clearing extended
     } else {
+        let ext
         if(right) {
-            let ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
+            ext = op2 >>> (op1 - 1); // Rightmost bit will be the extended flag
             ext = ext & 0x00000001;
         } else {
-            let ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
+            ext = op2 << (op1 - 1); // Leftmost bit will be the extended flag
             ext = ext & 0x80000000;
         }
-        if(ext != 0x0) ccr = (ccr | 0x11) >>> 0; // Flagging extended and carry
+        if(ext !== 0x0) ccr = (ccr | 0x11) >>> 0; // Flagging extended and carry
         else ccr = (ccr & 0x0E) >>> 0 // Clearing extended and carry
     }
     
@@ -444,7 +453,7 @@ function ashiftCCR(op1, op2, result, ccr, size, right) {
 
     let mask = getMSBMask(size);
 
-    if(op2 && mask != result && mask) ccr = ccr | 0x02;   // If the MSB has changed at any time during th operation we flag Overflow
+    if(op2 && mask !== result && mask) ccr = ccr | 0x02;   // If the MSB has changed at any time during th operation we flag Overflow
     else ccr = (ccr & 0x1D) >>> 0;                  // Clearing overflow
     
     return ccr;
@@ -501,17 +510,19 @@ export function asrOP(size, op1, op2, ccr) {
 }
 
 function roCCR(op1, op2, result, ccr, right) {
-    if(op1 = 0x0) {
+    if(op1 === 0x0) {
         ccr = (ccr & 0x1E) >>> 0; // Clearing carry, not clearing extended
     } else {
+        //TODO consider changing this to ternary operator
+        let ext
         if(right) {
-            let ext = op2 >>> (op1 - 1); // Rightmost bit will be the carry flag
+            ext = op2 >>> (op1 - 1); // Rightmost bit will be the carry flag
             ext = ext & 0x00000001;
         } else {
-            let ext = op2 << (op1 - 1); // Leftmost bit will be the carry flag
+            ext = op2 << (op1 - 1); // Leftmost bit will be the carry flag
             ext = ext & 0x80000000;
         }
-        if(ext != 0x0) ccr = (ccr | 0x01) >>> 0; // Flagging carry
+        if(ext !== 0x0) ccr = (ccr | 0x01) >>> 0; // Flagging carry
         else ccr = (ccr & 0x1E) >>> 0 // Clearing Carry
     }
     
@@ -535,7 +546,7 @@ export function rolOP(size, op1, op2, ccr) {
             return [aux, roCCR(op1, op2, res8[0], ccr, false)];
         }
         case Emulator.CODE_WORD:{
-            let aux = op & ~Emulator.WORD_MASK;
+            let aux = op & ~Emulator.WORD_MASK; //TODO Did you mean op2?
             op2 = op2 & Emulator.WORD_MASK;
             aux = aux + (((op2 << op1) | (op2 >>> (Emulator.SIZE_WORD - op1))) & Emulator.WORD_MASK);
             let res16 = new Int16Array(1);
@@ -743,3 +754,4 @@ export function divOP(op1, op2, ccr, is_unsigned) {
 
     return [result, ccr];
 }
+

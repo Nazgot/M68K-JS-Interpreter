@@ -1,7 +1,7 @@
 'use strict'
 
 import { MEMORY_OUT_OF_BOUND } from "./strings";
-
+import Emulator from "./emulator";
 // Memory is an hashmap that represents RAM cells.
 // Every cell is undefined at start, undefined means 0x00
 // We do this so the undo stack doesn't get bloated unless the memory is actually used
@@ -117,6 +117,6 @@ class MemoryError extends Error {
         this.name = 'MemoryError';
         //TODO convert to Performance.now() for better accuracy?
         this.date = new Date();
-        this.address = address; //TODO ?
+        //this.address = address; //TODO ?
     }
 }
