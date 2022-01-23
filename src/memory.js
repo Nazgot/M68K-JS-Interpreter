@@ -29,25 +29,25 @@ export default class {
 
         this.isValidAddress(address);
 
+        //TODO could convert to this.memory[address] || 0x00
         return this.memory[address] === undefined ? 0x00 : this.memory[address];
     }
 
     // Gets a word from memory
     getWord(address) {
 
-        let firstBytes = this.getByte(address + 0);
-        let secondBytes = this.getByte(address + 1);
-
+        const firstBytes = this.getByte(address + 0);
+        const secondBytes = this.getByte(address + 1);
         return parseInt(firstBytes + secondBytes, 16);
     }
 
     // Gets a long-word from memory
     getLong(address) {
 
-        let firstBytes = this.getByte(address + 0);
-        let secondBytes = this.getByte(address + 1);
-        let thirdBytes = this.getByte(address + 2);
-        let fourthBytes = this.getByte(address + 3);
+        const firstBytes = this.getByte(address + 0);
+        const secondBytes = this.getByte(address + 1);
+        const thirdBytes = this.getByte(address + 2);
+        const fourthBytes = this.getByte(address + 3);
 
         return parseInt(firstBytes + secondBytes + thirdBytes + fourthBytes, 16);
     }
@@ -115,7 +115,8 @@ class MemoryError extends Error {
             Error.captureStackTrace(this, MemoryError);
         
         this.name = 'MemoryError';
+        //TODO convert to Performance.now() for better accuracy?
         this.date = new Date();
-        this.address = address;
+        this.address = address; //TODO ?
     }
 }

@@ -1,41 +1,43 @@
 'use strict'
 
+
+//converts an array to a map object for better performance 
+function toMap(arr){
+    return Object.fromEntries(arr.map(e => [e,true]))
+}
+
+const branches = toMap([
+    "bra",
+    "ble",
+    "bsr",
+    "beq",
+    "bge",
+    "bgt",
+    "ble",
+    "blt",
+    "bne"
+])
 // Checks if a given instruction is a branch instruction
 export function isBranch(instruction) {
-
-    return [
-        "bra",
-        "ble",
-        "bsr",
-        "beq",
-        "bge",
-        "bgt",
-        "ble",
-        "blt",
-        "bne"
-    ].some(
-        opt => opt == instruction
-    );
+    return !!branches[instruction]
 }
 
+
+const immediateJumps = toMap([
+    "jmp",
+    "jsr"
+])
 // Checks if a given instruction is a jump immediate instruction
 export function isJumpImmediate(instruction) {
-
-    return [
-        "jmp",
-        "jsr"
-    ].some(
-        opt => opt == instruction
-    );
+    return !!immediateJumps[instruction]
 }
 
+const noOps = toMap([
+    "rts"
+])
 // Checks if a given instruction is an instruction without operators
 export function isNoOPsInstruction(instruction) {
-    return [
-        "rts"
-    ].some(
-        opt => opt == instruction
-    );
+    return !!noOps(instruction)
 }
 
 // Given a register it zeroes a word
@@ -43,7 +45,7 @@ export function eraseWord(register) {
     return register & 0xFFFF0000;
 }
 
-// Sleeps for x milliseconds (busy waiting)
+// Sleeps for x milliseconds (busy waiting) thread blocking
 // Is there a better method to achieve this?
 export function sleep(milliseconds) {
     var start = new Date().getTime();
@@ -54,6 +56,12 @@ export function sleep(milliseconds) {
     }
 }
 
+// Sleeps for x milliseconds (async), non thread blocking
+export function asyncSleep(milliseconds){
+    return new Promise(res => {
+        setTimeout(milliseconds,res)
+    })
+}
 
 // The following functions might become deprecated after emulator.js update // 
 
