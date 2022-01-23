@@ -15,17 +15,15 @@ export default class {
 
     // Creates and returns a new stack frame
     makeFrame(pc, ccr, registers, memory, errors, lastInstruction, line) {
-
         return {
-            pc: pc,
-            ccr: ccr,
-            lastInstruction: lastInstruction,
-            line: line,
+            pc,
+            ccr,
+            lastInstruction,
+            line,
             registers: [... registers],
             memory: {... memory},
             errors: [... errors]
         }
-
     }
 
     // Pushes a new frame into the stack
@@ -35,6 +33,8 @@ export default class {
 
     // Pops the top frame on the stack
     // Returns undefined if the stack is empty
+    
+    //TODO ^ could remove the check if it's empty, [].pop() returns undefined
     pop() {
         return this.stack.isEmpty() ? undefined : this.stack.pop();
     }

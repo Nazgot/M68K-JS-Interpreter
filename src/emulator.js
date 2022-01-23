@@ -51,9 +51,7 @@ class Emulator {
         this.instructions = program || ""; 
 
         // Splitting the program code into lines and removing whitespaces
-        this.instructions = this.instructions.split('\n').map(function(instruction) {
-            return instruction.trim();
-        });
+        this.instructions = this.instructions.split('\n').map(instruction => instruction.trim());
 
         // Cloning the instructions for error reports and last instructions utility
         this.cloned_instructions = [...this.instructions];
@@ -76,6 +74,7 @@ class Emulator {
     }
 
     debug() {
+        //TODO maybe use console.table() ?
         console.log("-----------------DEBUG------------------");
         console.log(this.instructions);
         console.log(this.cloned_instructions);
@@ -86,7 +85,7 @@ class Emulator {
     }
 
     /* GET AND SET */
-
+    //TODO maybe convert these into class setter and getters?
     setException(exception) {
         this.exception = exception;
     }
@@ -136,7 +135,7 @@ class Emulator {
     } 
 
     undoFromStack() {
-        let frame = this.undo.pop();
+        const frame = this.undo.pop();
         if(frame === undefined) 
             return;
         this.pc = frame.pc;
@@ -149,33 +148,33 @@ class Emulator {
     }
 
     removeComments() {
-        var uncommentedProgram = [];
+        const uncommentedProgram = [];
 
-        for(var i = 0; i < this.instructions.length; ++i) {
-            var instruction = this.instructions[i];
+        //TODO could use .map() instead but has to handle if the instruction is === ''
+        this.instructions.forEach(instruction => {
             // If we find a comment (starting with *), we replace the line with ''
-            if(instruction.indexOf('*') != -1) 
+            if(instruction.indexOf('*') !== -1) 
                 instruction = instruction.substring(0, instruction.indexOf('*')).trim();
-            if(instruction.indexOf(';') != -1) 
+            if(instruction.indexOf(';') !== -1) 
                 instruction = instruction.substring(0, instruction.indexOf(';')).trim();
             // Ignoring empty lines and comments
-            if(instruction != '') {
+            if(instruction !== '') {
                 // Saving both the instruction and it's original line number for debug purposes
                 uncommentedProgram.push([instruction.trim(), i + 1]);
-            }                
-        }
+            } 
+        })
         this.instructions = uncommentedProgram;
     }
 
     findLabels() {
         //for(var i = length - 1; i >= 0; --i) {
-        for(var i = 0; true; i++) {
+        for(let i = 0; true; i++) {
             if(i >= this.instructions.length) 
                 break;
 
-            var instruction = this.instructions[i][0].toLowerCase();
+            let instruction = this.instructions[i][0].toLowerCase();
    
-            var res = Emulator.ORG_REGEX.exec(instruction);
+            let res = Emulator.ORG_REGEX.exec(instruction);
             if(res) {
                 this.org_offset = parseInt(res[1], 16);   
                 this.instructions[i][2] = true;
@@ -185,7 +184,7 @@ class Emulator {
             }
 
             // Looking for end directive
-            if(instruction == "end") {
+            if(instruction === "end") {
 
                 if(this.endPointer !== undefined) {
                     this.exception = Strings.DUPLICATE_END + Strings.AT_LINE + this.instructions[i][1];
@@ -202,7 +201,7 @@ class Emulator {
             }
 
             // If a label is captured (ends with ':')
-            if(instruction.charAt(instruction.length -1 ) == ':') { 
+            if(instruction.charAt(instruction.length -1 ) === ':') { 
                 var label = instruction.substring(0, instruction.indexOf(':'));
                 // If the label is repeated an exception is thrown 
                 if(this.labels[label] !== undefined) {
@@ -219,7 +218,7 @@ class Emulator {
             // Checking if the current instruction is a DC.X
             res = Emulator.DC_REGEX.exec(instruction);
             // If it is a DC.X
-            if(res != null) {
+            if(res !== null) {
 
                 // We extract the label
                 var label = instruction.substring(0, instruction.indexOf(':'));
@@ -235,7 +234,7 @@ class Emulator {
 
                 var size = this.parseOpSize(tmp, false);
                 var isString = false;
-                isString = tmp.indexOf('"') != -1;
+                isString = tmp.indexOf('"') !== -1;
 
                 // If the instruction has a data list
                 if(!isString) {
@@ -299,7 +298,7 @@ class Emulator {
             
             // Checkign if the instruction is an EQU
             res = Emulator.EQU_REGEX.exec(instruction);
-            if(res != null) {
+            if(res !== null) {
                 var label = res[1];
                 var tmp = res[2];
                 this.labels[label] = tmp;
@@ -325,7 +324,7 @@ class Emulator {
             var instruction = this.instructions[i][0];
 
             // If the instruction is well written
-            if(instruction.indexOf(' ') != -1) {
+            if(instruction.indexOf(' ') !== -1) {
                 // I get the operation of the instruction
                 var operation = instruction.substring(0, instruction.indexOf(' ')).trim().toLowerCase();
                 // I get the operands of the instruction
@@ -373,7 +372,7 @@ class Emulator {
     }
 
     parseOpSize(instruction, errors_suppressed) {
-        if(instruction.indexOf('.') != -1) {
+        if(instruction.indexOf('.') !== -1) {
             // We get the char after the . (if any)
             var size = instruction.charAt(instruction.indexOf('.') + 1);
             switch(size.toLowerCase()) {
@@ -396,40 +395,25 @@ class Emulator {
     }
 
     parseRegisters(register) {
+        //Could convert this into an object of key/values to increase performance
         switch(register) {
-            case "a0":
-                return 0;
-            case "a1":
-                return 1;
-            case "a2":
-                return 2;
-            case "a3":
-                return 3;
-            case "a4":
-                return 4;
-            case "a5":
-                return 5;
-            case "a6":
-                return 6;
-            case "a7":
-            case "sp":
-                return 7;
-            case "d0":
-                return 8;
-            case "d1":
-                return 9; 
-            case "d2":
-                return 10; 
-            case "d3":
-                return 11; 
-            case "d4":
-                return 12; 
-            case "d5":
-                return 13; 
-            case "d6":
-                return 14; 
-            case "d7":
-                return 15;
+            case "a0": return 0;
+            case "a1": return 1;
+            case "a2": return 2;
+            case "a3": return 3;
+            case "a4": return 4;
+            case "a5": return 5;
+            case "a6": return 6;
+            case "a7": //TODO ??
+            case "sp": return 7;
+            case "d0": return 8;
+            case "d1": return 9; 
+            case "d2": return 10; 
+            case "d3": return 11; 
+            case "d4": return 12; 
+            case "d5": return 13; 
+            case "d6": return 14; 
+            case "d7": return 15;
             default:
                 this.errors.push(Strings.INVALID_REGISTER + Strings.AT_LINE + this.line);
                 return undefined;                
@@ -438,7 +422,7 @@ class Emulator {
 
     // Return an object containing the value and the type of the token
     parseOperand(token) {
-        var res = {
+        const res = {
             value: 0,
             type: 0,
             offset: undefined
@@ -446,12 +430,12 @@ class Emulator {
 
         token = token.trim();
         // We check if we have an offset-ed address register as an operand
-        if(token.indexOf('(') != -1 && token.indexOf(')') != -1) { 
+        if(token.indexOf('(') !== -1 && token.indexOf(')') !== -1) { 
             
-            if(token.indexOf('-') != -1) {
+            if(token.indexOf('-') !== -1) {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
-                if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+                if(result === undefined || result.type === Emulator.TOKEN_REG_DATA) {
                     this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
@@ -460,10 +444,10 @@ class Emulator {
                 res.offset = -0x1;
                 return res;
             }
-            if(token.indexOf('+') != -1) {
+            if(token.indexOf('+') !== -1) {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
-                if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+                if(result === undefined || result.type === Emulator.TOKEN_REG_DATA) {
                     this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
@@ -472,10 +456,10 @@ class Emulator {
                 res.offset = 0x1;
                 return res;
             }
-            if(token.charAt(0) == '(') {
+            if(token.charAt(0) === '(') {
                 // Isolating and parsing the token inside () recursively
                 let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
-                if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+                if(result === undefined || result.type === Emulator.TOKEN_REG_DATA) {
                     this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                     return undefined;
                 }
@@ -489,7 +473,7 @@ class Emulator {
             // Isolating and parsing the token inside () recursively
             let result = this.parseOperand(token.substring(token.indexOf('(') + 1, token.indexOf(')')));
             // Checking if the token inside () is valid
-            if(result == undefined || result.type == Emulator.TOKEN_REG_DATA) {
+            if(result === undefined || result.type === Emulator.TOKEN_REG_DATA) {
                 this.errors.push(Strings.NOT_AN_ADDRESS_REGISTER + Strings.AT_LINE + this.line);
                 return undefined;
             }
@@ -499,25 +483,25 @@ class Emulator {
         }
 
         // We check if the token is a register
-        if(token.charAt(0) == 'a') {
+        if(token.charAt(0) === 'a') {
             res.value = this.parseRegisters(token);
             res.type = Emulator.TOKEN_REG_ADDR;
             return res;
         } 
-        if (token.charAt(0) == 'd') {
+        if (token.charAt(0) === 'd') {
             res.value = this.parseRegisters(token);
             res.type = Emulator.TOKEN_REG_DATA;
             return res;
         }
 
         // We check if the token is an immediate
-        if(token.charAt(0) == '#') {
-            if(token.charAt(1) == '$') {
+        if(token.charAt(0) === '#') {
+            if(token.charAt(1) === '$') {
                 res.value = parseInt("0x" + token.substring(2, token.length));
                 res.type = Emulator.TOKEN_IMMEDIATE;
                 return res;
             }
-            else if(token.charAt(1) == '%') {
+            else if(token.charAt(1) === '%') {
                 res.value = parseInt(token.substring(2, token.length), 2);
                 res.type = Emulator.TOKEN_IMMEDIATE;
                 return res;
@@ -529,11 +513,11 @@ class Emulator {
         }
 
         // We check if the token is an offset
-        if(token.charAt(0) == '$') {
+        if(token.charAt(0) === '$') {
             res.value = parseInt("0x" + token.substring(1, token.length), 16);
             res.type = Emulator.TOKEN_OFFSET;
             return res;
-        } else if(token.charAt(0) == '%') {
+        } else if(token.charAt(0) === '%') {
             res.value = parseInt(token.substring(1, token.length), 2);
             res.type = Emulator.TOKEN_OFFSET;
             return res;
@@ -549,7 +533,7 @@ class Emulator {
     
     // Returns true if the program counter is aligned and not < = 0
     checkPC(pc) {       
-        return (0 <= pc / 4 && pc % 4 == 0);
+        return (0 <= pc / 4 && pc % 4 === 0);
     }
 
     emulationStep() {
@@ -571,11 +555,11 @@ class Emulator {
         }
 
         // Pushing a frame into the stack
-        if(this.pc != 0)
+        if(this.pc !== 0)
             this.undo.push(this.pc, this.ccr, this.registers, this.memory.getMemory(), this.errors, this.lastInstruction, this.line);
 
-        var instruction = this.instructions[this.pc / 4][0];
-        var flag = this.instructions[this.pc / 4][2];
+        let instruction = this.instructions[this.pc / 4][0];
+        let flag = this.instructions[this.pc / 4][2];
         this.line = this.instructions[this.pc / 4][1];
         this.lastInstruction = this.cloned_instructions[this.instructions[this.pc / 4][1] - 1];
         this.pc = this.pc + 4;
@@ -587,273 +571,282 @@ class Emulator {
         }
 
         // Checking if the instruction is an instruction that doesn't require operators
-        var noOPS = isNoOPsInstruction(instruction);
+        let noOPS = isNoOPsInstruction(instruction);
 
         // If the instruction is well formatted
-        if(instruction.indexOf(' ') != -1 || noOPS ) {
-            var operation;
+        if(instruction.indexOf(' ') !== -1 || noOPS ) {
+            let operation;
              
             
             if(!noOPS) {
                 // We check if the instruction has a specified size
-                if(instruction.indexOf('.') != -1) 
+                //TODO could use ternary here to select the value of indexOf
+                if(instruction.indexOf('.') !== -1) 
                     operation = instruction.substring(0, instruction.indexOf('.')).trim();
                 else
                     operation = instruction.substring(0, instruction.indexOf(' ')).trim();
 
+                //TODO those cant be changed to let because they are block scoped, consider putting it out of this block
                 var operands = instruction.substring(instruction.indexOf(' ') + 1, instruction.length).split(',');
                 var size = this.parseOpSize(instruction, false);
             } else 
                 operation = instruction;
             
+            //TODO can change this from a switch to a map to increase performance
             switch(operation.toLowerCase()) {
                 case "add":
-                    if(operands.length != 2) {
+                    /*TODO could replace the "break" with "return" to reduce code length, ex:
+                        if(operands.length !== 2) 
+                            return this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
+                        return this.add(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
+                    */
+
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.add(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
-                    break;
+                    break
                 case "addi":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.addi(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "adda":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.adda(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "move":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.move(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "movea":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.movea(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "sub":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.sub(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "subi":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.subi(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "suba":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.subi(size,this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "mulu":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.mulu(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "muls":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.muls(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "divu":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.divu(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "divs":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.divs(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "swap":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.swap(this.parseOperand(operands[0]));
                     break;
                 case "exg":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.exg(this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "clr":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.clr(size, this.parseOperand(operands[0]));
                     break;
                 case "not":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.not(size, this.parseOperand(operands[0]));
                     break;
                 case "and":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.and(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "andi":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.andi(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "or":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.or(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "ori":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.ori(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "eor":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.eor(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "eori":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.eori(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "neg":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.neg(size, this.parseOperand(operands[0]));
                     break;
                 case "ext":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.ext(size, this.parseOperand(operands[0]));
                     break;
                 case "lsl":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.llrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "lsr":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.llrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), true);
                     break;
                 case "asl":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.alrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "asr":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.alrShifts(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), true);
                     break;
                 case "rol": 
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.lrRotations(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), false);
                     break;
                 case "ror": 
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.lrRotations(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]), true);
                     break;
                 case "cmp":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.cmp(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "cmpa":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.cmpa(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "cmpi":
-                    if(operands.length != 2) {
+                    if(operands.length !== 2) {
                         this.errors.push(Strings.TWO_PARAMETERS_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.cmpi(size, this.parseOperand(operands[0]), this.parseOperand(operands[1]));
                     break;
                 case "tst":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.tst(size, this.parseOperand(operands[0]));
                     break;
                 case "jmp":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.jmp(operands[0]);
                     break;
                 case "jsr":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
@@ -863,56 +856,56 @@ class Emulator {
                     this.rts();
                     break;
                 case "bra":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bra(size, operands[0]);
                     break;
                 case "bsr":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bsr(size, operands[0]);
                     break;
                 case "beq":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.beq(size, operands[0]);
                     break;
                 case "bne":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.beq(size, operands[0]);
                     break;
                 case "bge":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bge(size, operands[0]);
                     break;
                 case "bgt":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.bgt(size, operands[0]);
                     break;
                 case "ble":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
                     this.ble(size, operands[0]);
                     break;
                 case "blt":
-                    if(operands.length != 1) {
+                    if(operands.length !== 1) {
                         this.errors.push(Strings.ONE_PARAMETER_EXPECTED + Strings.AT_LINE + this.line);
                         break;
                     }
@@ -929,11 +922,12 @@ class Emulator {
     // Adds the value of the source operand to the destination operand
     // Can't do memory to memory add
     add(size, op1, op2, is_sub) {
-        if(op1 == undefined || op2 == undefined) {
+        if(op1 === undefined || op2 === undefined) {
             // If i get inside here an error for the same issue has already been raised. 
             return undefined;
         }
 
+        //TODO all these need to be added in a block {} then change var to let
         switch(op1.type.toString() + op2.type.toString()) {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
@@ -1038,7 +1032,7 @@ class Emulator {
     // Adds an immediate value to the destination operand
     // Source must be an immediate
     addi(size, op1, op2, is_sub) {
-        if(op1 == undefined || op2 == undefined) {
+        if(op1 === undefined || op2 === undefined) {
             // If i get inside here an error for the same issue has already been raised. 
             return undefined;
         }
@@ -1339,23 +1333,21 @@ class Emulator {
 
     // Swaps the upper word with the lower word of a data register
     swap(op) {
-        if(op.type != Emulator.TOKEN_REG_DATA) {
-            this.errors.push(Strings.DATA_ONLY_SWAP + Strings.AT_LINE + this.line); 
-            return;
-        }
-        var res = swapOP(this.registers[op.value], this.ccr);
+        if(op.type !== Emulator.TOKEN_REG_DATA) 
+            return this.errors.push(Strings.DATA_ONLY_SWAP + Strings.AT_LINE + this.line); 
+
+        let res = swapOP(this.registers[op.value], this.ccr);
         this.registers[op.value] = res[0];
         this.ccr = res[1];
     }
 
     // Swaps the content of a register with the content of another register
     exg(op1, op2) {
-        if((op1.type != Emulator.TOKEN_REG_DATA && op1.type != Emulator.TOKEN_REG_ADDR) || (op2.type != Emulator.TOKEN_REG_DATA && op2.type != Emulator.TOKEN_REG_ADDR)) {
-                // ERROR, can only exg data - data , address-address, data - address, address - data;
-                this.errors.push(Strings.EXG_RESTRICTIONS + Strings.AT_LINE + this.line);
-                return;
-        }
-        var res = exgOP(this.registers[op1.value], this.registers[op2.value]);
+        if((op1.type !== Emulator.TOKEN_REG_DATA && op1.type !== Emulator.TOKEN_REG_ADDR) || (op2.type !== Emulator.TOKEN_REG_DATA && op2.type !== Emulator.TOKEN_REG_ADDR))
+            // ERROR, can only exg data - data , address-address, data - address, address - data;
+            return this.errors.push(Strings.EXG_RESTRICTIONS + Strings.AT_LINE + this.line);
+
+        let res = exgOP(this.registers[op1.value], this.registers[op2.value]);
         this.registers[op1.value] = res[0];
         this.registers[op2.value] = res[1];       
     }
@@ -1399,6 +1391,7 @@ class Emulator {
 
     // Reverses bits of the destination oprand
     not(size, op) {
+        //TODO put all of these into a block and then change var to let
         switch(op.type) {
             case Emulator.TOKEN_REG_DATA :
                 var res = notOP(size, this.registers[op.value], this.ccr);
@@ -1437,6 +1430,8 @@ class Emulator {
     // Can't do memory to memory and
     // Can't use address registers as source or destination
     and(size, op1, op2) {
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type.toString() + op2.type.toString()) {
             
             case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
@@ -1509,6 +1504,8 @@ class Emulator {
     // The first operand must be an immediate value
     // Can't use address registers as destination operands
     andi(size, op1, op2) {
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
 
@@ -1547,6 +1544,7 @@ class Emulator {
     // Can't do memory to memory or
     // Can't use address registers as source or destination
     or(size, op1, op2) {
+        //TODO put all of these into a block and then change var to let
         
         switch(op1.type.toString() + op2.type.toString()) {
             
@@ -1622,6 +1620,8 @@ class Emulator {
     // The first operand must be an immediate value
     // Can't use address registers as destination operands
     ori(size, op1, op2) {
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
 
@@ -1661,6 +1661,7 @@ class Emulator {
     // Can't use address registers as source or destination 
     // Can't use memory as source
     eor(size, op1, op2) {
+        //TODO put all of these into a block and then change var to let
         
         switch(op1.type.toString() + op2.type.toString()) {
             
@@ -1711,6 +1712,8 @@ class Emulator {
     // The first operand must be an immediate value
     // Can't use address registers as destination operands
     eori(size, op1, op2) {
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
 
@@ -1747,6 +1750,7 @@ class Emulator {
 
     // Negate a number from positive to negative and vice-versa
     neg(size, op) {
+        //TODO put all of these into a block and then change var to let
 
         switch(op.type) {
             case Emulator.TOKEN_REG_DATA :
@@ -1784,17 +1788,16 @@ class Emulator {
 
     // Extends the sign of a byte to word or of a word to long-word
     ext(size, op) {
-        if(size = Emulator.CODE_BYTE) {
-            this.errors.push(Strings.EXT_ON_BYTE + Strings.AT_LINE + this.line);
-            return;
-        }
+        if(size = Emulator.CODE_BYTE)//TODO did you mean to check === ?
+            return this.errors.push(Strings.EXT_ON_BYTE + Strings.AT_LINE + this.line);
 
         switch(op.type) {
-            case Emulator.TOKEN_REG_DATA :
-                var res = extOP(size, this.registers[op.value], this.ccr);
+            case Emulator.TOKEN_REG_DATA :{
+                let res = extOP(size, this.registers[op.value], this.ccr);
                 this.registers[op.value] = res[0];
                 this.ccr = res[1];
                 break;
+            }
             default :
                 this.errors.push(Strings.DATA_ONLY_EXT + Strings.AT_LINE + this.line);
                 break;
@@ -1803,6 +1806,8 @@ class Emulator {
 
     // Logical left and right shift
     llrShifts(size, op1, op2, right) {
+        //TODO put all of these into a block and then change var to let
+
         var res;
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
@@ -1813,11 +1818,12 @@ class Emulator {
                     return undefined;
                 }
                 op1 = parseInt(op1.value);
+                //TODO can make these smaller in 2 lines, just need to check if llrShifts has return value
                 if(op1 > 0x01) {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1845,7 +1851,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1893,7 +1899,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1922,7 +1928,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1961,6 +1967,8 @@ class Emulator {
     // Arithmetical left and right shifts
     alrShifts(size, op1, op2, right) {
         var res;
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type.toString() + op2.type.toString()) {
             
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
@@ -1975,7 +1983,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -1999,7 +2007,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2036,7 +2044,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2059,7 +2067,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_SHIFT + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2086,6 +2094,8 @@ class Emulator {
     // Right and left bits rotations
     lrRotations(size, op1, op2, right) {
         var res ;
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
 
@@ -2099,7 +2109,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2121,7 +2131,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2156,7 +2166,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2179,7 +2189,7 @@ class Emulator {
                     this.errors.push(Strings.ONE_BIT_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
-                if(size != Emulator.CODE_WORD) {
+                if(size !== Emulator.CODE_WORD) {
                     this.errors.push(Strings.WORD_ONLY_MEMORY_ROTATE + Strings.AT_LINE + this.line);
                     return;
                 }
@@ -2206,6 +2216,7 @@ class Emulator {
     // Compare 
     cmp(size, op1, op2) {
         var res;
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_DATA.toString():
@@ -2259,6 +2270,7 @@ class Emulator {
     // Compare address
     cmpa(size, op1, op2) {
         var res;
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString():
@@ -2298,6 +2310,7 @@ class Emulator {
     // Compare immediate
     cmpi(size, op1, op2) {
         var res;
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString():
@@ -2327,6 +2340,8 @@ class Emulator {
     // Test an operand with 0
     tst(size, op1) {
         var res;
+        //TODO put all of these into a block and then change var to let
+
         switch(op1.type) {
             case Emulator.TOKEN_REG_DATA:
                 res = tstOP(size, this.registers[op1.value], this.ccr);
@@ -2353,12 +2368,13 @@ class Emulator {
         }
     }
     
-    jmp(op) {
 
+        //TODO consider logging only when in debug for all functions below
+        //console.log can reduce performance by a lot
+    jmp(op) {
         op = parseInt(op);
         this.pc += op;
         console.log("Jumping to: " + this.pc);
-        return;
     }
 
     bra(size, op) {
@@ -2370,13 +2386,11 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     jsr(op) {
         this.memory.set(this.registers[7] += 4, this.pc, Emulator.CODE_LONG ); // Saving the current PC in the stack (register 7 is SP = a7) +4 because an address is a long
         this.jmp(op); // Performing a jump to subroutine
-        return;
     }
 
     rts() {
@@ -2388,7 +2402,6 @@ class Emulator {
     bsr(size, op) {
         this.memory.set(this.registers[7] += 4, this.pc, Emulator.CODE_LONG ); // Saving the current PC in the stack (register 7 is SP = a7) +4 because an address is a long
         this.bra(size, op); // Performing a bra to subroutine
-        return;
     }
 
     beq(size, op) {
@@ -2399,7 +2412,6 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     bne(size, op) {
@@ -2410,7 +2422,6 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     bge(size, op) {
@@ -2421,7 +2432,6 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     bgt(size, op) {
@@ -2432,7 +2442,6 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     ble(size, op) {
@@ -2443,7 +2452,6 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     blt(size, op) {
@@ -2454,14 +2462,13 @@ class Emulator {
             return;
         }
         this.pc = res[0];
-        return;
     }
 
     // Destination must be a data register
     // Source can be anything but address register
     // Word-size only -> long as result
     mulu(size, op1, op2) {
-        if(op1 == undefined || op2 == undefined) {
+        if(op1 === undefined || op2 === undefined) {
             // Already risen
             return undefined;
         }
@@ -2470,6 +2477,7 @@ class Emulator {
             // TODO: warning, src and dest will be cast as word (16-bits);
             console.log("warning: src and dest will be cast as word (16-bits)");
         }  
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             
@@ -2530,7 +2538,7 @@ class Emulator {
     // Source can be anything but address register
     // Word-size only -> long as result
     muls(size, op1, op2) {
-        if(op1 == undefined || op2 == undefined) {
+        if(op1 === undefined || op2 === undefined) {
             // Already risen
             return undefined;
         }
@@ -2539,6 +2547,7 @@ class Emulator {
             // TODO: warning, src and dest will be cast as word (16-bits);
             console.log("warning: src and dest will be cast as word (16-bits)");
         }  
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             
@@ -2600,7 +2609,7 @@ class Emulator {
     // Source can be anything but address register
     // Word-size only -> long as result
     divu(size, op1, op2) {
-        if(op1 == undefined || op2 == undefined) {
+        if(op1 === undefined || op2 === undefined) {
             // Already Risen
             return undefined;
         }
@@ -2615,6 +2624,7 @@ class Emulator {
             // TODO: warning, src and dest will be cast as word (16-bits);
             console.log("warning: src will be cast as word (16-bits)");
         }  
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             
@@ -2675,7 +2685,7 @@ class Emulator {
     // Source can be anything but address register
     // Word-size only -> long as result
     divs(size, op1, op2) {
-        if(op1 == undefined || op2 == undefined) {
+        if(op1 === undefined || op2 === undefined) {
             // Already risen
             return undefined;
         }
@@ -2690,6 +2700,7 @@ class Emulator {
             this.errors.push(Strings.NO_MEMORY_MEMORY_ALLOWED + Strings.AT_LINE + this.line);
             console.log("warning: src will be cast as word (16-bits)");
         }  
+        //TODO put all of these into a block and then change var to let
 
         switch(op1.type.toString() + op2.type.toString()) {
             
@@ -2749,16 +2760,15 @@ class Emulator {
     instruction_size(instruction) {
 
         // Checking if the instruction is an instruction that doesn't require operators
-        var noOPS = isNoOPsInstruction(instruction);
-    
+        const noOPS = isNoOPsInstruction(instruction);
         // If the instruction is well formatted
-        if(instruction.indexOf(' ') != -1 || noOPS ) {
+        if(instruction.indexOf(' ') !== -1 || noOPS ) {
             var operation;
              
             
             if(!noOPS) {
                 // We check if the instruction has a specified size
-                if(instruction.indexOf('.') != -1) 
+                if(instruction.indexOf('.') !== -1) 
                     operation = instruction.substring(0, instruction.indexOf('.')).trim();
                 else
                     operation = instruction.substring(0, instruction.indexOf(' ')).trim();
@@ -2768,6 +2778,7 @@ class Emulator {
             } else 
                 operation = instruction;
             
+            //TODO consider putting this into a map to increase performance
             switch(operation.toLowerCase()) {
                 case "add":
                     // ADD OP_SIZE is always 2 bytes
@@ -2942,5 +2953,3 @@ class Emulator {
         }
     }
 }
-
-
