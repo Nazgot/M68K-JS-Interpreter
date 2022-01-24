@@ -33,10 +33,8 @@ export default class {
 
     // Pops the top frame on the stack
     // Returns undefined if the stack is empty
-    
-    //TODO ^ could remove the check if it's empty, [].pop() returns undefined
     pop() {
-        return this.stack.isEmpty() ? undefined : this.stack.pop();
+        return this.stack.pop();
     }
 
     // Look at the top frame in the stack without returning it
@@ -44,12 +42,15 @@ export default class {
         return this.stack[this.stack.length - 1]; 
     }
 
-    // Checks if the current stack is empty
+    /**
+     * @deprecated Checks if the current stack is empty
+     */
     isEmpty() {
+        console.warn("Calling a deprecated function!")
         return !this.stack.length;
     }
 
-    // Resets the stack
+    // Empties the stack
     clearStack() {
         this.stack = [];
     }

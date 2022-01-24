@@ -29,27 +29,26 @@ export default class {
 
         this.isValidAddress(address);
 
-        //TODO could convert to this.memory[address] || 0x00
-        return this.memory[address] === undefined ? 0x00 : this.memory[address];
+        return this.memory[address] || 0x00;
     }
 
     // Gets a word from memory
     getWord(address) {
 
-        const firstBytes = this.getByte(address + 0);
-        const secondBytes = this.getByte(address + 1);
-        return parseInt(firstBytes + secondBytes, 16);
+        const firstByte = this.getByte(address + 0);
+        const secondByte = this.getByte(address + 1);
+        return parseInt(firstByte + secondByte, 16);
     }
 
     // Gets a long-word from memory
     getLong(address) {
 
-        const firstBytes = this.getByte(address + 0);
-        const secondBytes = this.getByte(address + 1);
-        const thirdBytes = this.getByte(address + 2);
-        const fourthBytes = this.getByte(address + 3);
+        const firstByte = this.getByte(address + 0);
+        const secondByte = this.getByte(address + 1);
+        const thirdByte = this.getByte(address + 2);
+        const fourthByte = this.getByte(address + 3);
 
-        return parseInt(firstBytes + secondBytes + thirdBytes + fourthBytes, 16);
+        return parseInt(firstByte + secondByte + thirdByte + fourthByte, 16);
     }
 
     set(address, value, size) {

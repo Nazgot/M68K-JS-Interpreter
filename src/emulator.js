@@ -97,52 +97,51 @@ export default class Emulator {
     }
 
     /* GET AND SET */
-    //TODO maybe convert these into class setter and getters?
     setException(exception) {
         this.exception = exception;
     }
 
-    getException() {
+    get exception() {
         return this.exception;
     }
 
-    getPC() {
+    get pc() {
         return this.pc;
     }
 
-    getRegisters() {
+    get registers() {
         return this.registers;
     }
 
-    getMemory() {
+    get memory() {
         return this.memory;
     }
     
-    getLastInstruction() {
+    get lastInstruction() {
         return this.lastInstruction;
     }
 
-    getErrors() {
+    get errors() {
         return this.errors;
     }
 
-    getZFlag() {
+    get zFlag() {
         return (this.ccr & 0x04) >>> 2;
     } 
 
-    getVFlag() {
+    get vFlag() {
         return (this.ccr & 0x02) >>> 1;
     } 
 
-    getNFlag() {
+    get nFlag() {
         return (this.ccr & 0x08) >>> 3;
     } 
 
-    getCFlag() {
+    get cFlag() {
         return (this.ccr & 0x01) >>> 0;
     } 
 
-    getXFlag() {
+    get xFlag() {
         return (this.ccr & 0x10) >>> 4;
     } 
 
@@ -164,7 +163,8 @@ export default class Emulator {
 
         //TODO could use .map() instead but has to handle if the instruction is === ''
         this.instructions.forEach((instruction,i) => {
-            // If we find a comment (starting with *), we replace the line with ''
+            // If we find a comment, we replace the line with ''
+            // In different implementations comments start with either * or ; so i kept both
             if(instruction.indexOf('*') !== -1) 
                 instruction = instruction.substring(0, instruction.indexOf('*')).trim();
             if(instruction.indexOf(';') !== -1) 
@@ -2037,8 +2037,8 @@ export default class Emulator {
                 }
                 let res
                 if(right) res = asrOP(size, op1, this.registers[op2.value], this.ccr); 
-                else aslOP(size, op1, this.registers[op2.value], this.ccr); //TODO did you mean to do res = aslOp... ?
-                this.registers[op2.value] = res[0]; //TODO res can be undefined if it's not right
+                else res = aslOP(size, op1, this.registers[op2.value], this.ccr);
+                this.registers[op2.value] = res[0];
                 this.ccr = res[1];
                 break;
             }
@@ -2260,7 +2260,7 @@ export default class Emulator {
                 this.ccr = res[1]; 
                 break;
             }
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString(): {//This one
+            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString(): {
                 op1 = parseInt(op1.value);
                 let res = cmpOP(size, op1, this.registers[op2.value], this.ccr);
                 this.ccr = res[1];
@@ -2274,7 +2274,6 @@ export default class Emulator {
                 this.cmpa(size, op1, op2);
                 break;
 
-            case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_DATA.toString(): //TODO this is extra? there is an equal one few lines above
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET.toString():
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_OFFSET_ADDR.toString():
                 this.cmpi(size, op1, op2);
@@ -2389,6 +2388,7 @@ export default class Emulator {
 
         //TODO consider logging only when in debug for all functions below
         //console.log can reduce performance by a lot
+        // The console .log are development refuses
     jmp(op) {
         op = parseInt(op);
         this.pc += op;
@@ -2782,7 +2782,6 @@ export default class Emulator {
         // If the instruction is well formatted
         if(instruction.indexOf(' ') !== -1 || noOPS ) {
             let operation;
-            //TODO these two can be undefined if it's a noOps instruction but are still used in the switch below
             let operands;
             let size;
             if(!noOPS) {

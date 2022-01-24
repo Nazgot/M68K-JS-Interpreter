@@ -117,7 +117,7 @@ function addByte(src, dest, ccr, is_sub) {
     result[0] = dest & Emulator.BYTE_MASK;
 
     // Updating CCR
-    if(is_sub) ccr = subCCR(src16[0], dest16[0], dest, result[0], ccr); //TODO src16 and dest16 aren't defined
+    if(is_sub) ccr = subCCR(src8[0], dest8[0], dest, result[0], ccr);
     else ccr = addCCR(positive, negative, dest, result[0], ccr, Emulator.BYTE_MASK, is_sub);
 
     dest = (dest & Emulator.BYTE_MASK) >>> 0  //we trim again to 8 
@@ -526,7 +526,7 @@ function roCCR(op1, op2, result, ccr, right) {
         else ccr = (ccr & 0x1E) >>> 0 // Clearing Carry
     }
     
-    if(result === 0x0) ccr = (ccr | 0x04) >>> 0;     // Flagging zero
+    if(result === 0x0) ccr = (ccr | 0x04) >>> 0;    // Flagging zero
     else ccr = (ccr & 0x1B) >>> 0;                  // Clearing zero
     if(result < 0) ccr = (ccr | 0x08) >>> 0;        // Flagging negative
     else ccr = (ccr & 0x17) >>> 0;                  // Clrearing Negative
@@ -546,7 +546,7 @@ export function rolOP(size, op1, op2, ccr) {
             return [aux, roCCR(op1, op2, res8[0], ccr, false)];
         }
         case Emulator.CODE_WORD:{
-            let aux = op & ~Emulator.WORD_MASK; //TODO Did you mean op2?
+            let aux = op2 & ~Emulator.WORD_MASK;
             op2 = op2 & Emulator.WORD_MASK;
             aux = aux + (((op2 << op1) | (op2 >>> (Emulator.SIZE_WORD - op1))) & Emulator.WORD_MASK);
             let res16 = new Int16Array(1);
