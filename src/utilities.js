@@ -1,5 +1,4 @@
-'use strict'
-import Emulator from "./emulator"
+import Emulator from "./emulator.js"
 
 //converts an array to a map object for better performance 
 function toMap(arr){

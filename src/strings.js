@@ -1,4 +1,3 @@
-'use strict'
 
 // Exceptions
 export const INVALID_PC_EXCEPTION = "Execution killed: Invalid program counter.";

@@ -1,11 +1,10 @@
-'use strict'
-import { getMSBMask } from "./utilities";
+import { getMSBMask } from "./utilities.js";
 //TODO maybe convert those if else to ternaries?
 //TODO split each type of operation into it's own file
 //example splitting logical and arithmetic operations, could also make it as an object like:
 //MathOps.add, LogicOp.and, etc
 
-import Emulator from "./emulator";
+import Emulator from "./emulator.js";
 
 export function addOP(src, dest, ccr, size, is_sub) {
     switch(size) {
