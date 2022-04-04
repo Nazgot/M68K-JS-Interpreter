@@ -6,8 +6,6 @@ import Undo from './undo';
 import * as Utilities from './utilities';
 
 
-
-
 export {
     Emulator,
     Memory,

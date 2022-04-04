@@ -101,30 +101,6 @@ export default class Emulator {
         this.exception = exception;
     }
 
-    get exception() {
-        return this.exception;
-    }
-
-    get pc() {
-        return this.pc;
-    }
-
-    get registers() {
-        return this.registers;
-    }
-
-    get memory() {
-        return this.memory;
-    }
-    
-    get lastInstruction() {
-        return this.lastInstruction;
-    }
-
-    get errors() {
-        return this.errors;
-    }
-
     get zFlag() {
         return (this.ccr & 0x04) >>> 2;
     } 

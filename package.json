@@ -11,6 +11,16 @@
     "type": "git",
     "url": "git+https://github.com/Nazgot/M68K-JS-Interpreter.git"
   },
+  
+  "scripts": {
+    "build": "npm run build:types && npm run build:js",
+    "build:js": "rollup -c",
+    "build:types": "tsc --emitDeclarationOnly",
+    "start": "rollup -c -w",
+    "types:check": "tsc --noEmit",
+    "test": "jest",
+    "types:watch": "npm run types:check -- --watch"
+  },
   "keywords": [
     "m68k",
     "interpreter",
@@ -22,14 +32,6 @@
     "url": "https://github.com/Nazgot/M68K-JS-Interpreter/issues"
   },
   "homepage": "https://github.com/Nazgot/M68K-JS-Interpreter#readme",
-  "scripts": {
-    "build": "npm run build:types && npm run build:js",
-    "build:js": "rollup -c",
-    "build:types": "tsc --emitDeclarationOnly",
-    "start": "rollup -c -w",
-    "types:check": "tsc --noEmit",
-    "types:watch": "npm run types:check -- --watch"
-  },
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.5",
