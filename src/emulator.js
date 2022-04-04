@@ -1024,8 +1024,8 @@ export default class Emulator {
                 this.addi(size, op1, op2, is_sub);
                 break;
 
+            //case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() : //TODO duplicate at the start
             case Emulator.TOKEN_REG_DATA.toString() + Emulator.TOKEN_REG_ADDR.toString() :
-            case Emulator.TOKEN_REG_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() : //TODO duplicate at the start
             case Emulator.TOKEN_OFFSET.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_OFFSET_ADDR.toString() + Emulator.TOKEN_REG_ADDR.toString() :
             case Emulator.TOKEN_IMMEDIATE.toString() + Emulator.TOKEN_REG_ADDR.toString() :
