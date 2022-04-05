@@ -11,7 +11,6 @@
     "type": "git",
     "url": "git+https://github.com/Nazgot/M68K-JS-Interpreter.git"
   },
-  
   "scripts": {
     "build": "npm run build:types && npm run build:js",
     "build:js": "rollup -c",
@@ -44,10 +43,8 @@
     "@typescript-eslint/parser": "^2.29.0",
     "eslint": "^6.8.0",
     "eslint-plugin-jest": "^23.8.2",
-    "jest": "^25.4.0",
     "rollup": "^2.7.2",
     "rollup-plugin-babel": "^4.4.0",
     "typescript": "^3.8.3"
-  },
-  "dependencies": {}
+  }
 }

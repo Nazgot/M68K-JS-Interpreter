@@ -70,7 +70,7 @@ export default class Emulator {
 
         // PRE-PROCESSING
         // Removing comments from the program
-        this.instructions = this.removeComments();
+        this.instructions = this.removeComments(this.instructions);
         // Assigning labels pointers
         this.findLabels();
         // Checking if END directive is defined
