@@ -1,5 +1,5 @@
 {
-  "name": "m68k",
+  "name": "m68k-js",
   "type": "module",
   "version": "0.1.1",
   "description": "This is an m68k interpreter written in javascript ",
