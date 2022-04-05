@@ -1,5 +1,4 @@
-'use strict'
-import Emulator from "./emulator"
+import Emulator from "./emulator.js"
 
 //converts an array to a map object for better performance 
 function toMap(arr){
@@ -37,7 +36,7 @@ const noOps = toMap([
 ])
 // Checks if a given instruction is an instruction without operators
 export function isNoOPsInstruction(instruction) {
-    return !!noOps(instruction)
+    return !!noOps[instruction]
 }
 
 // Given a register it zeroes a word

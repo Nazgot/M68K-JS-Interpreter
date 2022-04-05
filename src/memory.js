@@ -1,7 +1,6 @@
-'use strict'
 
-import { MEMORY_OUT_OF_BOUND } from "./strings";
-import Emulator from "./emulator";
+import { MEMORY_OUT_OF_BOUND_EXCEPTION } from "./strings.js";
+import Emulator from "./emulator.js";
 // Memory is an hashmap that represents RAM cells.
 // Every cell is undefined at start, undefined means 0x00
 // We do this so the undo stack doesn't get bloated unless the memory is actually used
@@ -101,7 +100,7 @@ export default class {
     isValidAddress(address) {
         address = address | 0;
         if(address < 0x00000000 || address > 0x7fffffff) 
-            throw new MemoryError(MEMORY_OUT_OF_BOUND + address, address);
+            throw new MemoryError(MEMORY_OUT_OF_BOUND_EXCEPTION + address, address);
     }
 }
 

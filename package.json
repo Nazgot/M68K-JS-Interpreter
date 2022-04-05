@@ -1,19 +1,25 @@
 {
   "name": "m68k-js-interpreter",
+  "type": "module",
   "version": "0.0.1",
   "description": "This is an m68k interpreter written in javascript ",
-  "main": "./src/emulator.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "type-check": "tsc --noEmit",
-    "type-check:watch": "npm run type-check -- --watch",
-    "build": "npm run build:types && npm run build:js",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline"
-  },
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "browser": "dist/index.umd.js",
+  "types": "dist/types/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Nazgot/M68K-JS-Interpreter.git"
+  },
+  
+  "scripts": {
+    "build": "npm run build:types && npm run build:js",
+    "build:js": "rollup -c",
+    "build:types": "tsc --emitDeclarationOnly",
+    "start": "rollup -c -w",
+    "types:check": "tsc --noEmit",
+    "test": "jest",
+    "types:watch": "npm run types:check -- --watch"
   },
   "keywords": [
     "m68k",
@@ -27,12 +33,21 @@
   },
   "homepage": "https://github.com/Nazgot/M68K-JS-Interpreter#readme",
   "devDependencies": {
-    "@babel/cli": "^7.16.8",
-    "@babel/core": "^7.16.12",
-    "@babel/preset-env": "^7.16.11",
-    "@babel/preset-typescript": "^7.16.7",
-    "@typescript-eslint/eslint-plugin": "^5.10.0",
-    "@typescript-eslint/parser": "^5.10.0",
-    "eslint": "^8.7.0"
-  }
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.5",
+    "@babel/preset-typescript": "^7.9.0",
+    "@rollup/plugin-commonjs": "^11.1.0",
+    "@rollup/plugin-json": "^4.0.3",
+    "@rollup/plugin-node-resolve": "^7.1.3",
+    "@types/jest": "^25.2.1",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.29.0",
+    "eslint": "^6.8.0",
+    "eslint-plugin-jest": "^23.8.2",
+    "jest": "^25.4.0",
+    "rollup": "^2.7.2",
+    "rollup-plugin-babel": "^4.4.0",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {}
 }
