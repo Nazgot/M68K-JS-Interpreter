@@ -1,7 +1,7 @@
 {
-  "name": "m68k-js",
+  "name": "m68k",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "This is an m68k interpreter written in javascript ",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
