@@ -3,9 +3,9 @@
   "type": "module",
   "version": "0.1.2",
   "description": "This is an m68k interpreter written in javascript ",
-  "main": "dist/index.cjs.js",
+  "main": "dist/index.esm.js",
+  "cjs": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
-  "browser": "dist/index.umd.js",
   "types": "dist/types/index.d.ts",
   "repository": {
     "type": "git",

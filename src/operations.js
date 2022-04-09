@@ -649,9 +649,6 @@ export function bleOP(size, op, pc, ccr) {
     let ZFlag = ccr & 0x04;                                // Extracting the Z flag from ccr
     let VFlag = ccr & 0x02;                                // Extracting the V flag from ccr
     let NFlag = ccr & 0x08;                                // Extracting the N flag from ccr
-    console.log("Z: " + ZFlag.toString(2));
-    console.log("V: " + VFlag.toString(2));
-    console.log("N: " + NFlag.toString(2));
     if( ZFlag || (!VFlag && NFlag) || (VFlag && !NFlag) )  
         return braOP(size, op, pc);
     return [pc, false];                                    // Else we just return the pc
