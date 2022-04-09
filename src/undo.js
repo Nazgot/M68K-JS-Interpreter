@@ -1,7 +1,7 @@
 
 // Undo is a stack that keeps track of the program execution
 // And allow us to go back in time during step by step execution
-export default class {
+export class Undo {
 
     constructor() {
         this.stack = [];

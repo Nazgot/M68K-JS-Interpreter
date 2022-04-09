@@ -25,5 +25,4 @@ END`
 
 const emulator = new Emulator(program)
 while(!emulator.emulationStep());
-
 expect(emulator.registers).toStrictEqual(new Int32Array([0,0,0,0,0,0,0,0,0,3509,2848,3164,-3834,-316,0,2351]));

@@ -1,5 +1,5 @@
-import Memory from "./memory.js"
-import Undo from "./undo.js"
+import {Memory} from "./memory.js"
+import {Undo} from "./undo.js"
 
 
 import {

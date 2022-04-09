@@ -5,7 +5,7 @@ import Emulator from "./emulator.js";
 // Every cell is undefined at start, undefined means 0x00
 // We do this so the undo stack doesn't get bloated unless the memory is actually used
 // This class throws MemoryExceptions
-export default class {
+export class Memory {
 
     constructor() {
         this.memory = {};
